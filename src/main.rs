@@ -34,7 +34,7 @@ impl Eye {
     fn picture<F>(&self, w: u32, h: u32, f: F) -> DynamicImage
         where F : Fn(Ray) -> [u8; 3] {
 
-        // Initilize variables used to compute ray
+        // Initialize variables used to compute ray
         let dist = 100.;
         let screen_x = (self.fov / 2.).tan() * dist;
         let screen_y = screen_x * h as f64 / w as f64;
@@ -81,18 +81,17 @@ impl<'a> Scene<'a> {
     }
 
     fn raytrace(&self, ray: Ray) -> [f64; 3] {
+        // Compute intersection
         let inter = self.objects.intersect(&ray);
         if inter.is_none() {
             return [0., 0., 0.];
         }
-        let mut diffuse = 0.;
-        for light in self.lights.iter() {
-            diffuse += light.diffuse(inter.unwrap());
-        }
+
+        // Compute lighting
         let mut color = inter.unwrap().color;
-        color[0] *= diffuse;
-        color[1] *= diffuse;
-        color[2] *= diffuse;
+        for light in self.lights.iter() {
+            color = light.color(color, &ray, inter.unwrap());
+        }
         color
     }
 }
@@ -103,7 +102,7 @@ fn main() {
     scene.add_object(box Plane::new(Vec3::new(0., 0., 0.), Vec3::new(0., 0., 1.), [0., 1., 0.]));
     scene.add_object(box Sphere::new(Vec3::new(40., 0., 0.), 20., [0., 0., 1.]));
     scene.add_object(box AABox::new(Vec3::new(-40., 0., 0.), Vec3::new(40., 20., 10.), [0., 0., 1.]));
-    scene.add_light(box Bulb::new(Vec3::new(0., 10., 100.)));
+    scene.add_light(box Bulb::new(Vec3::new(0., 10., 100.), 1.5, 20, 0.7));
 
     // Fill image
     let eye = Eye::new(Vec3::new(0., 0., 100.), Vec3::new(0., 0., 0.), 2.1 /* 120° */);
@@ -115,6 +114,6 @@ fn main() {
     });
 
     // Save image
-    let mut out = File::create(&Path::new("image.png")).unwrap();
+    let mut out = File::create(&Path::new("image/image.png")).unwrap();
     let _ = img.save(&mut out, PNG);
 }

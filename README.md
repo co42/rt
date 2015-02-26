@@ -23,5 +23,6 @@
 - Transparency
 - Reflection
 - Height map
+- Load scene from input (json)
 
 # FIXME

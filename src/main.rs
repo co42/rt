@@ -104,35 +104,22 @@ impl<'a> Scene<'a> {
 }
 
 fn main() {
-    let imgs = 20;
-    let eye_step = 2. * 3.1416 / imgs as f64;
-    let eye_dist = 100.;
-    for cur in 0..imgs {
-        let a = eye_step * cur as f64;
-        let d1 = a.cos() * eye_dist;
-        let d2 = a.sin() * eye_dist;
+    // Initialize scene
+    let mut scene = Scene::new();
+    scene.add_object(box Plane::new(Vec3::new(0., 0., 0.), Vec3::new(0., 0., 1.), [0., 1., 0.]));
+    scene.add_object(box Sphere::new(Vec3::new(0., 0., 0.), 50., [0., 0., 1.]));
+    scene.add_light(box Bulb::new(Vec3::new(0., 0., 100.)));
 
-        // Initialize scene
-        let mut scene = Scene::new();
-        scene.add_object(box AABox::new(Vec3::new(0., 0., 0.), Vec3::new(9., 9., 9.), [1., 0., 0.]));
-        scene.add_object(box AABox::new(Vec3::new(15., 0., 0.), Vec3::new(10., 10., 10.), [0., 1., 0.]));
-        scene.add_object(box AABox::new(Vec3::new(-15., 0., 0.), Vec3::new(10., 10., 10.), [0., 1., 0.]));
-        scene.add_object(box AABox::new(Vec3::new(0., 15., 0.), Vec3::new(10., 10., 10.), [0., 0., 1.]));
-        scene.add_object(box AABox::new(Vec3::new(0., -15., 0.), Vec3::new(10., 10., 10.), [0., 0., 1.]));
-        scene.add_light(box Bulb::new(Vec3::new(0., d2, d1)));
+    // Fill image
+    let eye = Eye::new(Vec3::new(0., 0., 100.), Vec3::new(0., 0., 0.), 2.1 /* 120° */);
+    let img = eye.picture(1280, 720, |ray| {
+        let color = scene.raytrace(ray);
+        // Convert color from 0..1f64 to 0..255u8
+        let to_u8 = |c| (c * 255.) as u8;
+        [to_u8(color[0]), to_u8(color[1]), to_u8(color[2])]
+    });
 
-        // Fill image
-        let eye = Eye::new(Vec3::new(5., d2, d1), Vec3::new(-a, 0., 0.), 2.1 /* 120° */);
-        let img = eye.picture(1280, 720, |ray| {
-            let color = scene.raytrace(ray);
-            // Convert color from 0..1f64 to 0..255u8
-            let to_u8 = |c| (c * 255.) as u8;
-            [to_u8(color[0]), to_u8(color[1]), to_u8(color[2])]
-        });
-
-        // Save image
-        let img_name = format!("rotate/image{:03}.png", cur);
-        let mut out = File::create(&Path::new(img_name)).unwrap();
-        let _ = img.save(&mut out, PNG);
-    }
+    // Save image
+    let mut out = File::create(&Path::new("image.png")).unwrap();
+    let _ = img.save(&mut out, PNG);
 }

@@ -101,17 +101,23 @@ impl<'a> Scene<'a> {
 fn main() {
     // Initialize scene
     let mut scene = Scene::new();
-    let green = Material::new([0., 1., 0.], 0.1, 1.);
-    scene.add_object(box Plane::new(Vec3::new(0., 0., 0.), Vec3::new(0., 0., 1.), green));
-    let red = Material::new([1., 0., 0.], 0.7, 1.);
-    scene.add_object(box Sphere::new(Vec3::new(40., 0., 0.), 20., red));
-    let blue = Material::new([0., 0., 1.], 0.6, 1.);
-    scene.add_object(box AABox::new(Vec3::new(-25., 0., 0.), Vec3::new(40., 20., 10.), blue));
-    scene.add_light(box Bulb::new(Vec3::new(0., 10., 100.), 1.5, 20, 0.7));
+
+    // Add objects
+    let wall = Material::new([0.9, 0.9, 0.9], 0., 1.);
+    scene.add_object(box AABox::new(Vec3::new(0., 0., 100.), Vec3::new(100., 100., 100.), wall, true));
+    let blue = Material::new([0., 0.2, 0.6], 0.3, 1.);
+    scene.add_object(box AABox::new(Vec3::new(40., -40., 60.), Vec3::new(20., 20., 20.), blue, false));
+    let red = Material::new([0.7, 0.2, 0.1], 0.6, 1.);
+    scene.add_object(box Sphere::new(Vec3::new(40., -20., 60.), 10., red));
+    let yellow = Material::new([1., 1., 0.2], 0.4, 1.);
+    scene.add_object(box AABox::new(Vec3::new(-10., -40., 60.), Vec3::new(80., 6., 20.), yellow, false));
+
+    // Add materials
+    scene.add_light(box Bulb::new(Vec3::new(0., 0., 100.), 1.5, 20, 0.7));
 
     // Fill image
-    let eye = Eye::new(Vec3::new(0., 0., 100.), Vec3::new(0., 0., 0.), 2.1 /* 120° */);
-    let img = eye.picture(1280, 720, |ray| {
+    let eye = Eye::new(Vec3::new(0., 0., 120.), Vec3::new(0., 0., 0.), 2.1 /* 120° */);
+    let img = eye.picture(1280, 1280, |ray| {
         let color = scene.raytrace(ray);
         // Convert color from 0..1f64 to 0..255u8
         let to_u8 = |c| (c * 255.) as u8;

@@ -156,13 +156,15 @@ pub struct AABox<'a> {
 
 impl<'a> AABox<'a> {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, dim: Vec3, mat: Material) -> AABox<'a> {
-        let left_pos = Vec3::new(pos.x - dim.x / 2., pos.y, pos.z);
-        let right_pos = Vec3::new(pos.x + dim.x / 2., pos.y, pos.z);
-        let top_pos = Vec3::new(pos.x, pos.y + dim.y / 2., pos.z);
-        let bottom_pos = Vec3::new(pos.x, pos.y - dim.y / 2., pos.z);
-        let front_pos = Vec3::new(pos.x, pos.y, pos.z + dim.z / 2.);
-        let back_pos = Vec3::new(pos.x, pos.y, pos.z - dim.z / 2.);
+    pub fn new(pos: Vec3, dim: Vec3, mat: Material, skybox: bool) -> AABox<'a> {
+        let sign = if skybox { -1. } else { 1. };
+
+        let left_pos = Vec3::new(pos.x - dim.x / 2. * sign, pos.y, pos.z);
+        let right_pos = Vec3::new(pos.x + dim.x / 2. * sign, pos.y, pos.z);
+        let top_pos = Vec3::new(pos.x, pos.y + dim.y / 2. * sign, pos.z);
+        let bottom_pos = Vec3::new(pos.x, pos.y - dim.y / 2. * sign, pos.z);
+        let front_pos = Vec3::new(pos.x, pos.y, pos.z + dim.z / 2. * sign);
+        let back_pos = Vec3::new(pos.x, pos.y, pos.z - dim.z / 2. * sign);
 
         AABox { faces: Objects::new(vec![
             box AARect::new(left_pos, Dir::Left, dim, mat),

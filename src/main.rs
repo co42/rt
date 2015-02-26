@@ -113,7 +113,7 @@ fn main() {
     scene.add_object(box AABox::new(Vec3::new(-10., -40., 60.), Vec3::new(80., 6., 20.), yellow, false));
 
     // Add materials
-    scene.add_light(box Bulb::new(Vec3::new(0., 0., 100.), 1.5, 20, 0.7));
+    scene.add_light(box Bulb::new(Vec3::new(0., 0., 100.), 1.5, 20, 0.9));
 
     // Fill image
     let eye = Eye::new(Vec3::new(0., 0., 120.), Vec3::new(0., 0., 0.), 2.1 /* 120° */);

@@ -1,9 +1,10 @@
 use std::num::Float;
 use vec::{ Vec3, dot };
 use ray::{ Ray, Inter };
+use material::Material;
 
 pub trait Light {
-    fn color(&self, color: [f64; 3], ray: &Ray, inter: Inter) -> [f64; 3];
+    fn color(&self, mat: &mut Material, ray: &Ray, inter: Inter);
 }
 
 #[allow(dead_code)]
@@ -22,20 +23,18 @@ impl Bulb {
 }
 
 impl Light for Bulb {
-    fn color(&self, color: [f64; 3], ray: &Ray, inter: Inter) -> [f64; 3] {
+    fn color(&self, mat: &mut Material, ray: &Ray, inter: Inter) {
         let l = (self.pos - inter.pos).normalize();
         let n = inter.normal;
         let r = (n * 2. * dot(l, n) - l).normalize();
         let v = (ray.pos - inter.pos).normalize();
 
-        let diff = self.diff * dot(l, n).max(0.);
-        let spec = self.spec * dot(r, v).max(0.).powi(self.shin);
+        let diff = self.diff * mat.diff * dot(l, n).max(0.);
+        let spec = self.spec * mat.spec * dot(r, v).max(0.).powi(self.shin);
 
-        let r = (color[0] * diff + spec).min(1.);
-        let g = (color[1] * diff + spec).min(1.);
-        let b = (color[2] * diff + spec).min(1.);
-
-        [r, g, b]
+        mat.color[0] = (mat.color[0] * diff + spec).min(1.);
+        mat.color[1] = (mat.color[1] * diff + spec).min(1.);
+        mat.color[2] = (mat.color[2] * diff + spec).min(1.);
     }
 }
 
@@ -55,19 +54,17 @@ impl Sun {
 }
 
 impl Light for Sun {
-    fn color(&self, color: [f64; 3], ray: &Ray, inter: Inter) -> [f64; 3] {
+    fn color(&self, mat: &mut Material, ray: &Ray, inter: Inter) {
         let l = self.dir * -1.;
         let n = inter.normal;
         let r = (n * 2. * dot(l, n) - l).normalize();
         let v = (ray.pos - inter.pos).normalize();
 
-        let diff = self.diff * dot(l, n).max(0.);
-        let spec = self.spec * dot(r, v).max(0.).powi(self.shin);
+        let diff = self.diff * mat.diff * dot(l, n).max(0.);
+        let spec = self.spec * mat.spec * dot(r, v).max(0.).powi(self.shin);
 
-        let r = (color[0] * diff + spec).min(1.);
-        let g = (color[1] * diff + spec).min(1.);
-        let b = (color[2] * diff + spec).min(1.);
-
-        [r, g, b]
+        mat.color[0] = (mat.color[0] * diff + spec).min(1.);
+        mat.color[1] = (mat.color[1] * diff + spec).min(1.);
+        mat.color[2] = (mat.color[2] * diff + spec).min(1.);
     }
 }

@@ -1,4 +1,5 @@
 use vec::Vec3;
+use material::Material;
 
 pub struct Ray {
     pub pos: Vec3,
@@ -16,11 +17,11 @@ pub struct Inter {
     pub dist:   f64,
     pub pos:    Vec3,
     pub normal: Vec3,
-    pub color:  [f64; 3],
+    pub mat:    Material,
 }
 
 impl Inter {
-    pub fn new(dist: f64, pos: Vec3, normal: Vec3, color: [f64; 3]) -> Inter {
-        Inter { dist: dist, pos: pos, normal: normal, color: color }
+    pub fn new(dist: f64, pos: Vec3, normal: Vec3, mat: Material) -> Inter {
+        Inter { dist: dist, pos: pos, normal: normal, mat: mat }
     }
 }

@@ -15,10 +15,12 @@
 ### Effects
 
 - Diffuse
+- Specular
 
 # TODO
 
 - Handle severals lights correctly
+- Ambient light
 - Handle plane with two faces
 - Transparency
 - Reflection

@@ -11,11 +11,13 @@ use std::old_io::fs::File;
 use image::*;
 use vec::*;
 use ray::*;
+use material::*;
 use object::*;
 use light::*;
 
 mod vec;
 mod ray;
+mod material;
 mod object;
 mod light;
 mod frac;
@@ -88,20 +90,23 @@ impl<'a> Scene<'a> {
         }
 
         // Compute lighting
-        let mut color = inter.unwrap().color;
+        let mut mat = inter.unwrap().mat;
         for light in self.lights.iter() {
-            color = light.color(color, &ray, inter.unwrap());
+            light.color(&mut mat, &ray, inter.unwrap());
         }
-        color
+        mat.color
     }
 }
 
 fn main() {
     // Initialize scene
     let mut scene = Scene::new();
-    scene.add_object(box Plane::new(Vec3::new(0., 0., 0.), Vec3::new(0., 0., 1.), [0., 1., 0.]));
-    scene.add_object(box Sphere::new(Vec3::new(40., 0., 0.), 20., [0., 0., 1.]));
-    scene.add_object(box AABox::new(Vec3::new(-40., 0., 0.), Vec3::new(40., 20., 10.), [0., 0., 1.]));
+    let green = Material::new([0., 1., 0.], 0.1, 1.);
+    scene.add_object(box Plane::new(Vec3::new(0., 0., 0.), Vec3::new(0., 0., 1.), green));
+    let red = Material::new([1., 0., 0.], 0.7, 1.);
+    scene.add_object(box Sphere::new(Vec3::new(40., 0., 0.), 20., red));
+    let blue = Material::new([0., 0., 1.], 0.6, 1.);
+    scene.add_object(box AABox::new(Vec3::new(-25., 0., 0.), Vec3::new(40., 20., 10.), blue));
     scene.add_light(box Bulb::new(Vec3::new(0., 10., 100.), 1.5, 20, 0.7));
 
     // Fill image

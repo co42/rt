@@ -1,6 +1,7 @@
 use std::num::Float;
 use vec::{ Vec3, dot };
 use ray::{ Ray, Inter };
+use material::Material;
 
 pub trait Object {
     fn intersect(&self, ray: &Ray) -> Option<Inter>;
@@ -37,13 +38,13 @@ impl<'a> Object for Objects<'a> {
 pub struct Sphere {
     pos:    Vec3,
     radius: f64,
-    color:  [f64; 3],
+    mat:    Material,
 }
 
 impl Sphere {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, radius: f64, color: [f64; 3]) -> Sphere {
-        Sphere { pos: pos, radius: radius, color: color }
+    pub fn new(pos: Vec3, radius: f64, mat: Material) -> Sphere {
+        Sphere { pos: pos, radius: radius, mat: mat }
     }
 }
 
@@ -66,7 +67,7 @@ impl Object for Sphere {
         let dist = if t2 <= 0. || t1 < t2 { t1 } else { t2 };
         let pos = ray.pos + ray.dir * dist;
         let normal = (pos - self.pos).normalize();
-        Some(Inter::new(dist, pos, normal, self.color))
+        Some(Inter::new(dist, pos, normal, self.mat))
     }
 }
 
@@ -74,13 +75,13 @@ impl Object for Sphere {
 pub struct Plane {
     pos:    Vec3,
     normal: Vec3,
-    color:  [f64; 3],
+    mat:    Material,
 }
 
 impl Plane {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, normal: Vec3, color: [f64; 3]) -> Plane {
-        Plane { pos: pos, normal: normal.normalize(), color: color }
+    pub fn new(pos: Vec3, normal: Vec3, mat: Material) -> Plane {
+        Plane { pos: pos, normal: normal.normalize(), mat: mat }
     }
 }
 
@@ -91,7 +92,7 @@ impl Object for Plane {
             return None
         }
         let pos = ray.pos + ray.dir * dist;
-        Some(Inter::new(dist, pos, self.normal, self.color))
+        Some(Inter::new(dist, pos, self.normal, self.mat))
     }
 }
 
@@ -111,12 +112,12 @@ pub struct AARect {
     dir:    Dir,
     dim:    Vec3,
     normal: Vec3,
-    color:  [f64; 3],
+    mat:    Material,
 }
 
 impl AARect {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, dir: Dir, dim: Vec3, color: [f64; 3]) -> AARect {
+    pub fn new(pos: Vec3, dir: Dir, dim: Vec3, mat: Material) -> AARect {
         let normal = match dir {
             Dir::Left   => Vec3::new(-1., 0., 0.),
             Dir::Right  => Vec3::new(1., 0., 0.),
@@ -125,7 +126,7 @@ impl AARect {
             Dir::Front  => Vec3::new(0., 0., 1.),
             Dir::Back   => Vec3::new(0., 0., -1.),
         };
-        AARect { pos: pos, dir: dir, dim: dim, normal: normal, color: color }
+        AARect { pos: pos, dir: dir, dim: dim, normal: normal, mat: mat }
     }
 }
 
@@ -144,7 +145,7 @@ impl Object for AARect {
             return None
         }
 
-        Some(Inter::new(dist, pos, self.normal, self.color))
+        Some(Inter::new(dist, pos, self.normal, self.mat))
     }
 }
 
@@ -155,7 +156,7 @@ pub struct AABox<'a> {
 
 impl<'a> AABox<'a> {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, dim: Vec3, color: [f64; 3]) -> AABox<'a> {
+    pub fn new(pos: Vec3, dim: Vec3, mat: Material) -> AABox<'a> {
         let left_pos = Vec3::new(pos.x - dim.x / 2., pos.y, pos.z);
         let right_pos = Vec3::new(pos.x + dim.x / 2., pos.y, pos.z);
         let top_pos = Vec3::new(pos.x, pos.y + dim.y / 2., pos.z);
@@ -164,12 +165,12 @@ impl<'a> AABox<'a> {
         let back_pos = Vec3::new(pos.x, pos.y, pos.z - dim.z / 2.);
 
         AABox { faces: Objects::new(vec![
-            box AARect::new(left_pos, Dir::Left, dim, color),
-            box AARect::new(right_pos, Dir::Right, dim, color),
-            box AARect::new(top_pos, Dir::Top, dim, color),
-            box AARect::new(bottom_pos, Dir::Bottom, dim, color),
-            box AARect::new(front_pos, Dir::Front, dim, color),
-            box AARect::new(back_pos, Dir::Back, dim, color),
+            box AARect::new(left_pos, Dir::Left, dim, mat),
+            box AARect::new(right_pos, Dir::Right, dim, mat),
+            box AARect::new(top_pos, Dir::Top, dim, mat),
+            box AARect::new(bottom_pos, Dir::Bottom, dim, mat),
+            box AARect::new(front_pos, Dir::Front, dim, mat),
+            box AARect::new(back_pos, Dir::Back, dim, mat),
         ]) }
     }
 }

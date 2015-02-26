@@ -6,6 +6,33 @@ pub trait Object {
     fn intersect(&self, ray: &Ray) -> Option<Inter>;
 }
 
+pub struct Objects<'a> {
+    all: Vec<Box<Object + 'a>>,
+}
+
+impl<'a> Objects<'a> {
+    pub fn new(all: Vec<Box<Object + 'a>>) -> Objects<'a> {
+        Objects { all: all }
+    }
+
+    pub fn add(&mut self, object: Box<Object + 'a>) {
+        self.all.push(object);
+    }
+}
+
+impl<'a> Object for Objects<'a> {
+    fn intersect(&self, ray: &Ray) -> Option<Inter> {
+        let mut inter: Option<Inter> = None;
+        for object in self.all.iter() {
+            let cur_inter = object.intersect(&ray);
+            if cur_inter.is_some() && (inter.is_none() || cur_inter.unwrap().dist < inter.unwrap().dist) {
+                inter = cur_inter;
+            }
+        }
+        inter
+    }
+}
+
 #[allow(dead_code)]
 pub struct Sphere {
     pos:    Vec3,
@@ -122,13 +149,13 @@ impl Object for AARect {
 }
 
 #[allow(dead_code)]
-pub struct AABox {
-    faces: [AARect; 6],
+pub struct AABox<'a> {
+    faces: Objects<'a>,
 }
 
-impl AABox {
+impl<'a> AABox<'a> {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, dim: Vec3, color: [f64; 3]) -> AABox {
+    pub fn new(pos: Vec3, dim: Vec3, color: [f64; 3]) -> AABox<'a> {
         let left_pos = Vec3::new(pos.x - dim.x / 2., pos.y, pos.z);
         let right_pos = Vec3::new(pos.x + dim.x / 2., pos.y, pos.z);
         let top_pos = Vec3::new(pos.x, pos.y + dim.y / 2., pos.z);
@@ -136,26 +163,19 @@ impl AABox {
         let front_pos = Vec3::new(pos.x, pos.y, pos.z + dim.z / 2.);
         let back_pos = Vec3::new(pos.x, pos.y, pos.z - dim.z / 2.);
 
-        AABox { faces: [
-            AARect::new(left_pos, Dir::Left, dim, color),
-            AARect::new(right_pos, Dir::Right, dim, color),
-            AARect::new(top_pos, Dir::Top, dim, color),
-            AARect::new(bottom_pos, Dir::Bottom, dim, color),
-            AARect::new(front_pos, Dir::Front, dim, color),
-            AARect::new(back_pos, Dir::Back, dim, color),
-        ] }
+        AABox { faces: Objects::new(vec![
+            box AARect::new(left_pos, Dir::Left, dim, color),
+            box AARect::new(right_pos, Dir::Right, dim, color),
+            box AARect::new(top_pos, Dir::Top, dim, color),
+            box AARect::new(bottom_pos, Dir::Bottom, dim, color),
+            box AARect::new(front_pos, Dir::Front, dim, color),
+            box AARect::new(back_pos, Dir::Back, dim, color),
+        ]) }
     }
 }
 
-impl Object for AABox {
+impl<'a> Object for AABox<'a> {
     fn intersect(&self, ray: &Ray) -> Option<Inter> {
-        let mut inter: Option<Inter> = None;
-        for face in self.faces.iter() {
-            let cur_inter = face.intersect(&ray);
-            if cur_inter.is_some() && (inter.is_none() || cur_inter.unwrap().dist < inter.unwrap().dist) {
-                inter = cur_inter;
-            }
-        }
-        inter
+        self.faces.intersect(ray)
     }
 }

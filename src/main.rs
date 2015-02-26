@@ -63,17 +63,17 @@ impl Eye {
 }
 
 struct Scene<'a> {
-    objects: Vec<Box<Object + 'a>>,
+    objects: Objects<'a>,
     lights:  Vec<Box<Light + 'a>>,
 }
 
 impl<'a> Scene<'a> {
     fn new() -> Scene<'a> {
-        Scene { objects: vec![], lights: vec![] }
+        Scene { objects: Objects::new(vec![]), lights: vec![] }
     }
 
     fn add_object(&mut self, object: Box<Object + 'a>) {
-        self.objects.push(object);
+        self.objects.add(object);
     }
 
     fn add_light(&mut self, light: Box<Light + 'a>) {
@@ -81,13 +81,7 @@ impl<'a> Scene<'a> {
     }
 
     fn raytrace(&self, ray: Ray) -> [f64; 3] {
-        let mut inter: Option<Inter> = None;
-        for object in self.objects.iter() {
-            let cur_inter = object.intersect(&ray);
-            if cur_inter.is_some() && (inter.is_none() || cur_inter.unwrap().dist < inter.unwrap().dist) {
-                inter = cur_inter;
-            }
-        }
+        let inter = self.objects.intersect(&ray);
         if inter.is_none() {
             return [0., 0., 0.];
         }
@@ -107,8 +101,9 @@ fn main() {
     // Initialize scene
     let mut scene = Scene::new();
     scene.add_object(box Plane::new(Vec3::new(0., 0., 0.), Vec3::new(0., 0., 1.), [0., 1., 0.]));
-    scene.add_object(box Sphere::new(Vec3::new(0., 0., 0.), 50., [0., 0., 1.]));
-    scene.add_light(box Bulb::new(Vec3::new(0., 0., 100.)));
+    scene.add_object(box Sphere::new(Vec3::new(40., 0., 0.), 20., [0., 0., 1.]));
+    scene.add_object(box AABox::new(Vec3::new(-40., 0., 0.), Vec3::new(40., 20., 10.), [0., 0., 1.]));
+    scene.add_light(box Bulb::new(Vec3::new(0., 10., 100.)));
 
     // Fill image
     let eye = Eye::new(Vec3::new(0., 0., 100.), Vec3::new(0., 0., 0.), 2.1 /* 120° */);

@@ -21,9 +21,10 @@
 
 - Handle severals lights correctly
 - Ambient light
+- Shadow
 - Transparency
 - Reflection
-- Height map
+- Colored image to 3d object
 - Load scene from input (json)
 
 # FIXME

@@ -1,3 +1,4 @@
+#![feature(core)]
 #![feature(box_syntax)]
 #![feature(old_path)]
 #![feature(old_io)]
@@ -112,11 +113,16 @@ fn main() {
     let yellow = Material::new([1., 1., 0.2], 0.4, 1.);
     scene.add_object(box AABox::new(Vec3::new(-10., -40., 60.), Vec3::new(80., 6., 20.), yellow, false));
 
+    let green = Material::new([0.3, 1., 0.2], 0.4, 1.);
+    let pos_hexa = Vec3::new(-35., 0., 50.);
+    let hexa = AAHexa::new(pos_hexa, 15., 30., green);
+    scene.add_object(box Rotate::new(pos_hexa, Vec3::new(1., 0., 0.), box hexa));
+
     // Add materials
-    scene.add_light(box Bulb::new(Vec3::new(0., 0., 100.), 1.5, 20, 0.9));
+    scene.add_light(box Bulb::new(Vec3::new(0., 0., 120.), 1.5, 20, 0.9));
 
     // Fill image
-    let eye = Eye::new(Vec3::new(0., 0., 120.), Vec3::new(0., 0., 0.), 2.1 /* 120° */);
+    let eye = Eye::new(Vec3::new(0., 0., 110.), Vec3::new(0., 0., 0.), 2.1 /* 120° */);
     let img = eye.picture(1280, 1280, |ray| {
         let color = scene.raytrace(ray);
         // Convert color from 0..1f64 to 0..255u8
@@ -125,6 +131,7 @@ fn main() {
     });
 
     // Save image
-    let mut out = File::create(&Path::new("image/image.png")).unwrap();
+    let path = format!("image/image{:03}.png", 0);
+    let mut out = File::create(&Path::new(path)).unwrap();
     let _ = img.save(&mut out, PNG);
 }

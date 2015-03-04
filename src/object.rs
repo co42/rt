@@ -1,5 +1,6 @@
 use std::num::Float;
-use vec::{ Vec3, dot };
+use std::f64::consts::PI;
+use vec::{ Vec3, dot, rotate };
 use ray::{ Ray, Inter };
 use material::Material;
 
@@ -178,6 +179,65 @@ impl<'a> AABox<'a> {
 }
 
 impl<'a> Object for AABox<'a> {
+    fn intersect(&self, ray: &Ray) -> Option<Inter> {
+        self.faces.intersect(ray)
+    }
+}
+
+#[allow(dead_code)]
+pub struct Rotate<'a> {
+    pos:    Vec3,
+    dir:    Vec3,
+    object: Box<Object + 'a>,
+}
+
+impl<'a> Rotate<'a> {
+    #[allow(dead_code)]
+    pub fn new(pos: Vec3, dir: Vec3, object: Box<Object>) -> Rotate<'a> {
+        Rotate { pos: pos, dir: dir, object: object }
+    }
+}
+
+impl<'a> Object for Rotate<'a> {
+    fn intersect(&self, ray: &Ray) -> Option<Inter> {
+        let rot_ray = Ray::new(
+            rotate(ray.pos - self.pos, self.dir) + self.pos,
+            rotate(ray.dir, self.dir),
+        );
+        match self.object.intersect(&rot_ray) {
+            Some(inter) => {
+                Some(Inter::new(
+                    inter.dist,
+                    rotate(inter.pos - self.pos, self.dir * -1.) + self.pos,
+                    rotate(inter.normal, self.dir * -1.),
+                    inter.mat,
+                ))
+            },
+            None        => None,
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub struct AAHexa<'a> {
+    faces: Objects<'a>,
+}
+
+impl<'a> AAHexa<'a> {
+    #[allow(dead_code)]
+    pub fn new(pos: Vec3, x: f64, y: f64, mat: Material) -> AAHexa<'a> {
+        let z = (PI / 6.).tan() * x;
+        let dim = Vec3::new(x, y, z);
+
+        AAHexa { faces: Objects::new(vec![
+            box AABox::new(pos, dim, mat, false),
+            box Rotate::new(pos, Vec3::new(0., PI / 3., 0.), box AABox::new(pos, dim, mat, false)),
+            box Rotate::new(pos, Vec3::new(0., 2. * PI / 3., 0.), box AABox::new(pos, dim, mat, false)),
+        ]) }
+    }
+}
+
+impl<'a> Object for AAHexa<'a> {
     fn intersect(&self, ray: &Ray) -> Option<Inter> {
         self.faces.intersect(ray)
     }

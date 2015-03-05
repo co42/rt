@@ -7,6 +7,28 @@ pub trait Light {
     fn color(&self, mat: &mut Material, ray: &Ray, inter: Inter);
 }
 
+pub struct Lights<'a> {
+    all: Vec<Box<Light + 'a>>,
+}
+
+impl<'a> Lights<'a> {
+    pub fn new(all: Vec<Box<Light + 'a>>) -> Lights<'a> {
+        Lights { all: all }
+    }
+
+    pub fn add(&mut self, light: Box<Light + 'a>) {
+        self.all.push(light);
+    }
+}
+
+impl<'a> Light for Lights<'a> {
+    fn color(&self, mat: &mut Material, ray: &Ray, inter: Inter) {
+        for light in self.all.iter() {
+            light.color(mat, ray, inter);
+        }
+    }
+}
+
 #[allow(dead_code)]
 pub struct Bulb {
     pos:  Vec3,
@@ -32,9 +54,9 @@ impl Light for Bulb {
         let diff = self.diff * mat.diff * dot(l, n).max(0.);
         let spec = self.spec * mat.spec * dot(r, v).max(0.).powi(self.shin);
 
-        mat.color[0] = (mat.color[0] * diff + spec).min(1.);
-        mat.color[1] = (mat.color[1] * diff + spec).min(1.);
-        mat.color[2] = (mat.color[2] * diff + spec).min(1.);
+        mat.color.r = (mat.color.r * diff + spec).min(1.);
+        mat.color.g = (mat.color.g * diff + spec).min(1.);
+        mat.color.b = (mat.color.b * diff + spec).min(1.);
     }
 }
 
@@ -63,8 +85,8 @@ impl Light for Sun {
         let diff = self.diff * mat.diff * dot(l, n).max(0.);
         let spec = self.spec * mat.spec * dot(r, v).max(0.).powi(self.shin);
 
-        mat.color[0] = (mat.color[0] * diff + spec).min(1.);
-        mat.color[1] = (mat.color[1] * diff + spec).min(1.);
-        mat.color[2] = (mat.color[2] * diff + spec).min(1.);
+        mat.color.r = (mat.color.r * diff + spec).min(1.);
+        mat.color.g = (mat.color.g * diff + spec).min(1.);
+        mat.color.b = (mat.color.b * diff + spec).min(1.);
     }
 }

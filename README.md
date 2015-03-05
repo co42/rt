@@ -30,7 +30,7 @@
 - Transparency
 - Reflection
 - Colored image to 3d object
-- Load scene from input (json)
+- Config : handle errors correctly (check all unwrap / try! / panic! in code)
 
 # FIXME
 

@@ -5,6 +5,7 @@ authors = ["co"]
 
 [dependencies]
 num = "*"
+rustc-serialize = "*"
 
 [dependencies.image]
 git = "https://github.com/PistonDevelopers/image"

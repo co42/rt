@@ -36,6 +36,40 @@ impl<'a> Object for Objects<'a> {
 }
 
 #[allow(dead_code)]
+pub struct Rotate<'a> {
+    pos:    Vec3,
+    dir:    Vec3,
+    object: Box<Object + 'a>,
+}
+
+impl<'a> Rotate<'a> {
+    #[allow(dead_code)]
+    pub fn new(pos: Vec3, dir: Vec3, object: Box<Object>) -> Rotate<'a> {
+        Rotate { pos: pos, dir: dir, object: object }
+    }
+}
+
+impl<'a> Object for Rotate<'a> {
+    fn intersect(&self, ray: &Ray) -> Option<Inter> {
+        let rot_ray = Ray::new(
+            rotate(ray.pos - self.pos, self.dir) + self.pos,
+            rotate(ray.dir, self.dir),
+        );
+        match self.object.intersect(&rot_ray) {
+            Some(inter) => {
+                Some(Inter::new(
+                    inter.dist,
+                    rotate(inter.pos - self.pos, self.dir * -1.) + self.pos,
+                    rotate(inter.normal, self.dir * -1.),
+                    inter.mat,
+                ))
+            },
+            None        => None,
+        }
+    }
+}
+
+#[allow(dead_code)]
 pub struct Sphere {
     pos:    Vec3,
     radius: f64,
@@ -181,40 +215,6 @@ impl<'a> AABox<'a> {
 impl<'a> Object for AABox<'a> {
     fn intersect(&self, ray: &Ray) -> Option<Inter> {
         self.faces.intersect(ray)
-    }
-}
-
-#[allow(dead_code)]
-pub struct Rotate<'a> {
-    pos:    Vec3,
-    dir:    Vec3,
-    object: Box<Object + 'a>,
-}
-
-impl<'a> Rotate<'a> {
-    #[allow(dead_code)]
-    pub fn new(pos: Vec3, dir: Vec3, object: Box<Object>) -> Rotate<'a> {
-        Rotate { pos: pos, dir: dir, object: object }
-    }
-}
-
-impl<'a> Object for Rotate<'a> {
-    fn intersect(&self, ray: &Ray) -> Option<Inter> {
-        let rot_ray = Ray::new(
-            rotate(ray.pos - self.pos, self.dir) + self.pos,
-            rotate(ray.dir, self.dir),
-        );
-        match self.object.intersect(&rot_ray) {
-            Some(inter) => {
-                Some(Inter::new(
-                    inter.dist,
-                    rotate(inter.pos - self.pos, self.dir * -1.) + self.pos,
-                    rotate(inter.normal, self.dir * -1.),
-                    inter.mat,
-                ))
-            },
-            None        => None,
-        }
     }
 }
 

@@ -2,136 +2,26 @@
 #![feature(box_syntax)]
 #![feature(old_path)]
 #![feature(old_io)]
-#![feature(collections)]
 
 extern crate num;
+extern crate "rustc-serialize" as serialize;
 extern crate image;
-
-use std::num::Float;
-use std::old_io::fs::File;
-use image::*;
-use vec::*;
-use ray::*;
-use material::*;
-use object::*;
-use light::*;
 
 mod vec;
 mod ray;
 mod material;
 mod object;
 mod light;
+mod scene;
 mod frac;
-
-struct Eye {
-    pos: Vec3,
-    dir: Vec3,
-    fov: f64,
-}
-
-impl Eye {
-    fn new(pos: Vec3, dir: Vec3, fov: f64) -> Eye {
-        Eye { pos: pos, dir: dir, fov: fov }
-    }
-
-    fn picture<F>(&self, w: u32, h: u32, f: F) -> DynamicImage
-        where F : Fn(Ray) -> [u8; 3] {
-
-        // Initialize variables used to compute ray
-        let dist = 100.;
-        let screen_x = (self.fov / 2.).tan() * dist;
-        let screen_y = screen_x * h as f64 / w as f64;
-        let step = Vec3::new(screen_x / w as f64, -screen_y / h as f64, 0.);
-        let start = Vec3::new(-screen_x / 2., screen_y / 2., -dist) + step / 2.;
-
-        // Create raw buffer of pixels
-        let mut pixels = Vec::with_capacity((h * w) as usize);
-        for y in 0..h {
-            for x in 0..w {
-                // Create ray
-                let cur = Vec3::new(x as f64, y as f64, 0.);
-                let mut dir = start + cur * step;
-                dir = rotate(dir, self.dir).normalize();
-                let ray = Ray::new(self.pos, dir);
-
-                // Compute and push pixel's color to raw buffer
-                pixels.push_all(&f(ray));
-            }
-        }
-
-        // Create image from raw buffer
-        let img_buf = ImageBuffer::from_raw(w, h, pixels).unwrap();
-        ImageRgb8(img_buf)
-    }
-}
-
-struct Scene<'a> {
-    objects: Objects<'a>,
-    lights:  Vec<Box<Light + 'a>>,
-}
-
-impl<'a> Scene<'a> {
-    fn new() -> Scene<'a> {
-        Scene { objects: Objects::new(vec![]), lights: vec![] }
-    }
-
-    fn add_object(&mut self, object: Box<Object + 'a>) {
-        self.objects.add(object);
-    }
-
-    fn add_light(&mut self, light: Box<Light + 'a>) {
-        self.lights.push(light);
-    }
-
-    fn raytrace(&self, ray: Ray) -> [f64; 3] {
-        // Compute intersection
-        let inter = self.objects.intersect(&ray);
-        if inter.is_none() {
-            return [0., 0., 0.];
-        }
-
-        // Compute lighting
-        let mut mat = inter.unwrap().mat;
-        for light in self.lights.iter() {
-            light.color(&mut mat, &ray, inter.unwrap());
-        }
-        mat.color
-    }
-}
+mod config;
 
 fn main() {
-    // Initialize scene
-    let mut scene = Scene::new();
+    // Load eye and scene
+    let input = std::old_io::stdio::stdin().read_to_string().unwrap();
+    let (eye, scene, picture) = config::load(input.as_slice());
 
-    // Add objects
-    let wall = Material::new([0.9, 0.9, 0.9], 0., 1.);
-    scene.add_object(box AABox::new(Vec3::new(0., 0., 100.), Vec3::new(100., 100., 100.), wall, true));
-    let blue = Material::new([0., 0.2, 0.6], 0.3, 1.);
-    scene.add_object(box AABox::new(Vec3::new(40., -40., 60.), Vec3::new(20., 20., 20.), blue, false));
-    let red = Material::new([0.7, 0.2, 0.1], 0.6, 1.);
-    scene.add_object(box Sphere::new(Vec3::new(40., -20., 60.), 10., red));
-    let yellow = Material::new([1., 1., 0.2], 0.4, 1.);
-    scene.add_object(box AABox::new(Vec3::new(-10., -40., 60.), Vec3::new(80., 6., 20.), yellow, false));
-
-    let green = Material::new([0.3, 1., 0.2], 0.4, 1.);
-    let pos_hexa = Vec3::new(-35., 0., 50.);
-    let hexa = AAHexa::new(pos_hexa, 15., 30., green);
-    scene.add_object(box Rotate::new(pos_hexa, Vec3::new(1., 0., 0.), box hexa));
-
-    // Add materials
-    scene.add_light(box Bulb::new(Vec3::new(0., 0., 120.), 1.5, 20, 0.9));
-
-    // Fill image
-    let eye = Eye::new(Vec3::new(0., 0., 110.), Vec3::new(0., 0., 0.), 2.1 /* 120° */);
-    let img = eye.picture(1280, 1280, |ray| {
-        let color = scene.raytrace(ray);
-        // Convert color from 0..1f64 to 0..255u8
-        let to_u8 = |c| (c * 255.) as u8;
-        [to_u8(color[0]), to_u8(color[1]), to_u8(color[2])]
-    });
-
-    // Save image
-    let path = format!("image/image{:03}.png", 0);
-    let mut out = File::create(&Path::new(path)).unwrap();
-    let _ = img.save(&mut out, PNG);
+    // Compute and save image
+    let img = picture.shot(&eye, &scene);
+    picture.save(&img);
 }

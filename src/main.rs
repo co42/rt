@@ -22,6 +22,6 @@ fn main() {
     let (eye, scene, picture) = config::load(input.as_slice());
 
     // Compute and save image
-    let img = picture.shot(&eye, &scene);
+    let img = picture.shot(&eye, &scene, true);
     picture.save(&img);
 }

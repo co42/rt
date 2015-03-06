@@ -18,7 +18,7 @@ impl Picture {
         Picture { w: w, h: h, path: Path::new(path) }
     }
 
-    pub fn shot(&self, eye: &Eye, scene: &Scene) -> DynamicImage {
+    pub fn shot(&self, eye: &Eye, scene: &Scene, progress: bool) -> DynamicImage {
         // Initialize variables used to compute ray
         let dist = 100.;
         let screen_x = (eye.fov / 2.).tan() * dist;
@@ -42,6 +42,9 @@ impl Picture {
                 pixels.push(to_u8(color.r));
                 pixels.push(to_u8(color.g));
                 pixels.push(to_u8(color.b));
+            }
+            if progress {
+                println!("\r{:03}%", (y + 1) * 100 / self.h);
             }
         }
 

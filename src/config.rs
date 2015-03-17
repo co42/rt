@@ -177,8 +177,11 @@ fn load_material(root: &Json, key: &str) -> Material {
     let obj = root.find(key).unwrap();
     Material::new(
         load_color(obj, "color"),
-        load_f64(obj, "spec"),
-        load_f64(obj, "diff"),
+        load_f64_or(obj, "spec", 0.),
+        load_f64_or(obj, "diff", 1.),
+        load_f64_or(obj, "refr", 0.),
+        load_f64_or(obj, "refr-idx", 1.),
+        load_f64_or(obj, "refl", 0.),
     )
 }
 
@@ -210,6 +213,14 @@ fn load_str<'a>(root: &'a Json, key: &str) -> &'a str {
 // f64
 fn load_f64(root: &Json, key: &str) -> f64 {
     root.find(key).unwrap().as_f64().unwrap()
+}
+
+fn load_f64_or(root: &Json, key: &str, def: f64) -> f64 {
+    let obj = root.find(key);
+    if obj.is_none() {
+        return def;
+    }
+    obj.unwrap().as_f64().unwrap()
 }
 
 // u32

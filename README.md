@@ -11,6 +11,8 @@
 ### Effects
 
 - Rotate
+- Refraction
+- Reflection
 
 ## Lights
 
@@ -27,12 +29,13 @@
 - Handle severals lights correctly
 - Ambient light
 - Shadow
-- Transparency
-- Reflection
 - Colored image to 3d object
 - Config : handle errors correctly (check all unwrap / try! / panic! in code)
+- Config : max ray bounce, ambient light, background color
+- control.py : choose what to change, history
+- Objects : compute wrong normal if inside some objects
+- AA
 
 # FIXME
 
-- light issue (how to reproduce ?)
 - objects::Rotater : Wrong normal when rotate x and y

@@ -54,9 +54,9 @@ impl Light for Bulb {
         let diff = self.diff * mat.diff * dot(l, n).max(0.);
         let spec = self.spec * mat.spec * dot(r, v).max(0.).powi(self.shin);
 
-        mat.color.r = (mat.color.r * diff + spec).min(1.);
-        mat.color.g = (mat.color.g * diff + spec).min(1.);
-        mat.color.b = (mat.color.b * diff + spec).min(1.);
+        mat.color.r = mat.color.r * diff + spec;
+        mat.color.g = mat.color.g * diff + spec;
+        mat.color.b = mat.color.b * diff + spec;
     }
 }
 
@@ -85,8 +85,8 @@ impl Light for Sun {
         let diff = self.diff * mat.diff * dot(l, n).max(0.);
         let spec = self.spec * mat.spec * dot(r, v).max(0.).powi(self.shin);
 
-        mat.color.r = (mat.color.r * diff + spec).min(1.);
-        mat.color.g = (mat.color.g * diff + spec).min(1.);
-        mat.color.b = (mat.color.b * diff + spec).min(1.);
+        mat.color.r = mat.color.r * diff + spec;
+        mat.color.g = mat.color.g * diff + spec;
+        mat.color.b = mat.color.b * diff + spec;
     }
 }

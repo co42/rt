@@ -1,8 +1,8 @@
 use std::num::Float;
 use std::old_io::fs::File;
 use image::*;
-use vec::{ Vec3, rotate };
-use ray::Ray;
+use vec::{ Vec3, rotate, dot };
+use ray::{ Ray, Inter };
 use material::Color;
 use object::{ Object, Objects };
 use light::{ Light, Lights };
@@ -37,16 +37,15 @@ impl Picture {
                 let ray = Ray::new(eye.pos, dir);
 
                 // Compute and push pixel's colors to raw buffer
-                let color = scene.raytrace(ray);
+                let color = scene.raytrace(ray, 1. /* Air */, 5);
                 let to_u8 = |c| (c * 255.) as u8; // Convert color from 0..1f64 to 0..255u8
                 pixels.push(to_u8(color.r));
                 pixels.push(to_u8(color.g));
                 pixels.push(to_u8(color.b));
             }
-            if progress {
-                println!("\r{:03}%", (y + 1) * 100 / self.h);
-            }
+            if progress { print!("\r{:03}%", (y + 1) * 100 / self.h); }
         }
+        if progress { println!(""); }
 
         // Create image from raw buffer
         let img_buf = ImageBuffer::from_raw(self.w, self.h, pixels).unwrap();
@@ -96,7 +95,7 @@ impl<'a> Scene<'a> {
         self.lights.add(light);
     }
 
-    pub fn raytrace(&self, ray: Ray) -> Color {
+    pub fn raytrace(&self, ray: Ray, refr_idx: f64, count: u32) -> Color {
         // Compute intersection
         let inter = self.objects.intersect(&ray);
         if inter.is_none() {
@@ -106,6 +105,35 @@ impl<'a> Scene<'a> {
         // Compute lighting
         let mut mat = inter.unwrap().mat;
         self.lights.color(&mut mat, &ray, inter.unwrap());
-        mat.color
+
+        // Compute refraction
+        if mat.refr != 0. && count > 0 {
+            mat.color = mat.color + self.refraction(ray.dir, refr_idx, &inter.unwrap(), count);
+        }
+
+        // Compute reflection
+        if mat.refl != 0. && count > 0 {
+            mat.color = mat.color + self.reflection(ray.dir, refr_idx, &inter.unwrap(), count);
+        }
+
+        mat.color.normalize()
+    }
+
+    fn refraction(&self, ray_dir: Vec3, refr_idx: f64, inter: &Inter, count: u32) -> Color {
+        let n = refr_idx / inter.mat.refr_idx;
+        let c1 = -dot(inter.normal, ray_dir);
+        let c2 = (1. - n * n * (1. - c1 * c1)).sqrt();
+        let dir = (ray_dir * n + inter.normal * (n * c1 - c2)).normalize();
+        let ray = Ray::new(inter.pos + dir * 0.00001, dir);
+
+        self.raytrace(ray, inter.mat.refr_idx, count - 1) * inter.mat.refr
+    }
+
+    fn reflection(&self, ray_dir: Vec3, refr_idx: f64, inter: &Inter, count: u32) -> Color {
+        let c1 = -dot(inter.normal, ray_dir);
+        let dir = (ray_dir + inter.normal * 2. * c1).normalize();
+        let ray = Ray::new(inter.pos + dir * 0.00001, dir);
+
+        self.raytrace(ray, refr_idx, count - 1) * inter.mat.refl
     }
 }

@@ -101,7 +101,12 @@ impl Object for Sphere {
         }
         let dist = if t2 <= 0. || t1 < t2 { t1 } else { t2 };
         let pos = ray.pos + ray.dir * dist;
-        let normal = (pos - self.pos).normalize();
+
+        let normal = if (ray.pos - self.pos).length() > self.radius {
+            (pos - self.pos).normalize()
+        } else {
+            (pos - self.pos).normalize() * -1.
+        };
         Some(Inter::new(dist, pos, normal, self.mat))
     }
 }

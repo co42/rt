@@ -32,23 +32,28 @@ impl Picture {
         let step = Vec3::new(screen_x / w, -screen_y / h, 0.);
         let start = Vec3::new(-screen_x / 2., screen_y / 2., -dist) + step / 2.;
 
+        // Make ray
+        let make_ray = |px, py, sx, sy| {
+            let x = px * self.sample + sx;
+            let y = py * self.sample + sy;
+            let cur = Vec3::new(x as f64, y as f64, 0.);
+            let mut dir = start + cur * step;
+            dir = rotate(dir, eye.dir).normalize();
+            Ray::new(eye.pos, dir)
+        };
+
         // Create raw buffer of pixels
         let mut pixels = Vec::with_capacity((self.h * self.w) as usize);
-        for y in 0..self.h {
-            for x in 0..self.w {
+        let to_u8 = 255. / (self.sample * self.sample) as f64;
+        for py in 0..self.h {
+            for px in 0..self.w {
                 let color = (0..(self.sample * self.sample))
                     .map(|c| (c / self.sample, c % self.sample))
                     .map(|(sx, sy)| {
-                        // Create ray
-                        let cur = Vec3::new((x * self.sample + sx) as f64, (y * self.sample + sy) as f64, 0.);
-                        let mut dir = start + cur * step;
-                        dir = rotate(dir, eye.dir).normalize();
-                        let ray = Ray::new(eye.pos, dir);
-
                         // Compute color
-                        scene.raytrace(ray, 1. /* Air */, self.bounce)
+                        scene.raytrace(make_ray(px, py, sx, sy), 1. /* Air */, self.bounce)
                     })
-                    .fold(Color::new(0., 0., 0.), |acc, item| acc + item) * (255. / (self.sample * self.sample) as f64);
+                    .fold(Color::new(0., 0., 0.), |acc, item| acc + item) * to_u8;
 
                 // Push pixel's colors to raw buffer
                 pixels.push(color.r as u8);
@@ -58,7 +63,7 @@ impl Picture {
 
             // Show progress
             if progress {
-                print!("\r{:03}%", (y + 1) * 100 / self.h);
+                print!("\r{:03}%", (py + 1) * 100 / self.h);
                 stdio::flush();
             }
         }

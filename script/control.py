@@ -1,17 +1,47 @@
 #!/usr/bin/python3
 
+import readline
 import sys
+import traceback
 import json
 from librt import *
+
+actions = {}
+
+def badd(root, key, value):
+    root[key] += value
+
+def bmove(root, move):
+    actions['w'] = lambda: badd(root['pos'], 'z', -move)
+    actions['s'] = lambda: badd(root['pos'], 'z', +move)
+    actions['a'] = lambda: badd(root['pos'], 'x', -move)
+    actions['d'] = lambda: badd(root['pos'], 'x', +move)
+    actions['q'] = lambda: badd(root['pos'], 'y', +move)
+    actions['e'] = lambda: badd(root['pos'], 'y', -move)
+
+def brot(root, rot):
+    actions['o'] = lambda: badd(root['dir'], 'x', -rot)
+    actions['l'] = lambda: badd(root['dir'], 'x', +rot)
+    actions['k'] = lambda: badd(root['dir'], 'y', +rot)
+    actions[';'] = lambda: badd(root['dir'], 'y', -rot)
+    actions['i'] = lambda: badd(root['dir'], 'z', +rot)
+    actions['p'] = lambda: badd(root['dir'], 'z', -rot)
+
+def bmr(root, move, rot):
+    bmove(root, move)
+    brot(root, rot)
+
+def sscreen(conf, w, h):
+    conf['picture']['w'] = w
+    conf['picture']['h'] = h
+
+def init_actions(conf):
+    bmr(conf['eye'], 5, 0.1)
 
 def control(path_conf):
     with open(path_conf, 'r') as f:
         conf = json.loads(f.read())
-        # o = conf['scene']['lights'][0]['bulb']
-        o = conf['eye']
-
-    DEP = 5
-    ROT = 0.1
+        init_actions(conf)
 
     while True:
         print('Updating image ...')
@@ -23,40 +53,27 @@ def control(path_conf):
             cmd = rc
 
         # Quit
-        if cmd == '`':
+        if cmd == '\x1b':
             break
-        # Move
-        elif cmd == 'w':
-            o['pos']['z'] -= DEP
-        elif cmd == 's':
-            o['pos']['z'] += DEP
-        elif cmd == 'a':
-            o['pos']['x'] -= DEP
-        elif cmd == 'd':
-            o['pos']['x'] += DEP
-        elif cmd == 'q':
-            o['pos']['y'] += DEP
-        elif cmd == 'e':
-            o['pos']['y'] -= DEP
-        # Rotate
-        elif cmd == 'o':
-            o['dir']['x'] -= ROT
-        elif cmd == 'l':
-            o['dir']['x'] += ROT
-        elif cmd == 'k':
-            o['dir']['y'] += ROT
-        elif cmd == ';':
-            o['dir']['y'] -= ROT
-        elif cmd == 'i':
-            o['dir']['z'] += ROT
-        elif cmd == 'p':
-            o['dir']['z'] -= ROT
+        # Eval
+        elif cmd == '`':
+            stmt = input('eval> ')
+            try:
+                eval(stmt)
+            except Exception as e:
+                print('\033[93m' + traceback.format_exc() + '\033[0m')
         # Save
         elif cmd == 'n':
             path = input('path> ')
             with open(path, 'w+') as f:
                 f.write(json.dumps(conf, indent=4))
-        # Ignored
+        # Actions
+        elif cmd in actions:
+            try:
+                actions[cmd]()
+            except Exception as e:
+                print('\033[93m' + traceback.format_exc() + '\033[0m')
+        # Action ignored
         else:
             print('Command ignored')
 

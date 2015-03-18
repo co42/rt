@@ -1,5 +1,6 @@
 use std::num::Float;
 use std::f64::consts::PI;
+use std::rc::Rc;
 use vec::{ Vec3, dot, rotate };
 use ray::{ Ray, Inter };
 use material::Material;
@@ -27,7 +28,7 @@ impl<'a> Object for Objects<'a> {
         let mut inter: Option<Inter> = None;
         for object in self.all.iter() {
             let cur_inter = object.intersect(&ray);
-            if cur_inter.is_some() && (inter.is_none() || cur_inter.unwrap().dist < inter.unwrap().dist) {
+            if cur_inter.is_some() && (inter.is_none() || cur_inter.as_ref().unwrap().dist < inter.as_ref().unwrap().dist) {
                 inter = cur_inter;
             }
         }
@@ -73,12 +74,12 @@ impl<'a> Object for Rotate<'a> {
 pub struct Sphere {
     pos:    Vec3,
     radius: f64,
-    mat:    Material,
+    mat:    Rc<Material>,
 }
 
 impl Sphere {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, radius: f64, mat: Material) -> Sphere {
+    pub fn new(pos: Vec3, radius: f64, mat: Rc<Material>) -> Sphere {
         Sphere { pos: pos, radius: radius, mat: mat }
     }
 }
@@ -107,7 +108,7 @@ impl Object for Sphere {
         } else {
             (pos - self.pos).normalize() * -1.
         };
-        Some(Inter::new(dist, pos, normal, self.mat))
+        Some(Inter::new(dist, pos, normal, self.mat.clone()))
     }
 }
 
@@ -115,12 +116,12 @@ impl Object for Sphere {
 pub struct Plane {
     pos:    Vec3,
     normal: Vec3,
-    mat:    Material,
+    mat:    Rc<Material>,
 }
 
 impl Plane {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, normal: Vec3, mat: Material) -> Plane {
+    pub fn new(pos: Vec3, normal: Vec3, mat: Rc<Material>) -> Plane {
         Plane { pos: pos, normal: normal.normalize(), mat: mat }
     }
 }
@@ -132,7 +133,7 @@ impl Object for Plane {
             return None
         }
         let pos = ray.pos + ray.dir * dist;
-        Some(Inter::new(dist, pos, self.normal, self.mat))
+        Some(Inter::new(dist, pos, self.normal, self.mat.clone()))
     }
 }
 
@@ -152,12 +153,12 @@ pub struct AARect {
     dir:    Dir,
     dim:    Vec3,
     normal: Vec3,
-    mat:    Material,
+    mat:    Rc<Material>,
 }
 
 impl AARect {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, dir: Dir, dim: Vec3, mat: Material) -> AARect {
+    pub fn new(pos: Vec3, dir: Dir, dim: Vec3, mat: Rc<Material>) -> AARect {
         let normal = match dir {
             Dir::Left   => Vec3::new(-1., 0., 0.),
             Dir::Right  => Vec3::new(1., 0., 0.),
@@ -185,7 +186,7 @@ impl Object for AARect {
             return None
         }
 
-        Some(Inter::new(dist, pos, self.normal, self.mat))
+        Some(Inter::new(dist, pos, self.normal, self.mat.clone()))
     }
 }
 
@@ -196,7 +197,7 @@ pub struct AABox<'a> {
 
 impl<'a> AABox<'a> {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, dim: Vec3, mat: Material, skybox: bool) -> AABox<'a> {
+    pub fn new(pos: Vec3, dim: Vec3, mat: Rc<Material>, skybox: bool) -> AABox<'a> {
         let sign = if skybox { -1. } else { 1. };
 
         let left_pos = Vec3::new(pos.x - dim.x / 2. * sign, pos.y, pos.z);
@@ -207,12 +208,12 @@ impl<'a> AABox<'a> {
         let back_pos = Vec3::new(pos.x, pos.y, pos.z - dim.z / 2. * sign);
 
         AABox { faces: Objects::new(vec![
-            box AARect::new(left_pos, Dir::Left, dim, mat),
-            box AARect::new(right_pos, Dir::Right, dim, mat),
-            box AARect::new(top_pos, Dir::Top, dim, mat),
-            box AARect::new(bottom_pos, Dir::Bottom, dim, mat),
-            box AARect::new(front_pos, Dir::Front, dim, mat),
-            box AARect::new(back_pos, Dir::Back, dim, mat),
+            box AARect::new(left_pos, Dir::Left, dim, mat.clone()),
+            box AARect::new(right_pos, Dir::Right, dim, mat.clone()),
+            box AARect::new(top_pos, Dir::Top, dim, mat.clone()),
+            box AARect::new(bottom_pos, Dir::Bottom, dim, mat.clone()),
+            box AARect::new(front_pos, Dir::Front, dim, mat.clone()),
+            box AARect::new(back_pos, Dir::Back, dim, mat.clone()),
         ]) }
     }
 }
@@ -230,14 +231,14 @@ pub struct AAHexa<'a> {
 
 impl<'a> AAHexa<'a> {
     #[allow(dead_code)]
-    pub fn new(pos: Vec3, x: f64, y: f64, mat: Material) -> AAHexa<'a> {
+    pub fn new(pos: Vec3, x: f64, y: f64, mat: Rc<Material>) -> AAHexa<'a> {
         let z = (PI / 6.).tan() * x;
         let dim = Vec3::new(x, y, z);
 
         AAHexa { faces: Objects::new(vec![
-            box AABox::new(pos, dim, mat, false),
-            box Rotate::new(pos, Vec3::new(0., PI / 3., 0.), box AABox::new(pos, dim, mat, false)),
-            box Rotate::new(pos, Vec3::new(0., 2. * PI / 3., 0.), box AABox::new(pos, dim, mat, false)),
+            box AABox::new(pos, dim, mat.clone(), false),
+            box Rotate::new(pos, Vec3::new(0., PI / 3., 0.), box AABox::new(pos, dim, mat.clone(), false)),
+            box Rotate::new(pos, Vec3::new(0., 2. * PI / 3., 0.), box AABox::new(pos, dim, mat.clone(), false)),
         ]) }
     }
 }

@@ -34,7 +34,6 @@ impl Mul<f64> for Color {
     }
 }
 
-#[derive(Copy)]
 pub struct Material {
     pub color:     Color,
     pub spec:      f64,  // Specular

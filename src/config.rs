@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use serialize::json::Json;
 use vec::Vec3;
 use material::{ Color, Material };
@@ -116,7 +117,7 @@ fn load_aahexa<'a>(root: &Json, key: &str) -> AAHexa<'a> {
         load_vec3(obj, "pos"),
         load_f64(obj, "x"),
         load_f64(obj, "y"),
-        load_material(obj, "mat"),
+        Rc::new(load_material(obj, "mat")),
     )
 }
 
@@ -126,7 +127,7 @@ fn load_aabox<'a>(root: &Json, key: &str) -> AABox<'a> {
     AABox::new(
         load_vec3(obj, "pos"),
         load_vec3(obj, "dim"),
-        load_material(obj, "mat"),
+        Rc::new(load_material(obj, "mat")),
         load_bool(obj, "skybox"),
     )
 }
@@ -138,7 +139,7 @@ fn load_aarect(root: &Json, key: &str) -> AARect {
         load_vec3(obj, "pos"),
         load_dir(obj, "dir"),
         load_vec3(obj, "dim"),
-        load_material(obj, "mat"),
+        Rc::new(load_material(obj, "mat")),
     )
 }
 
@@ -161,7 +162,7 @@ fn load_plane(root: &Json, key: &str) -> Plane {
     Plane::new(
         load_vec3(obj, "pos"),
         load_vec3(obj, "normal"),
-        load_material(obj, "mat"),
+        Rc::new(load_material(obj, "mat")),
     )
 }
 
@@ -171,7 +172,7 @@ fn load_sphere(root: &Json, key: &str) -> Sphere {
     Sphere::new(
         load_vec3(obj, "pos"),
         load_f64(obj, "radius"),
-        load_material(obj, "mat"),
+        Rc::new(load_material(obj, "mat")),
     )
 }
 

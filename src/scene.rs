@@ -107,19 +107,19 @@ impl<'a> Scene<'a> {
         }
 
         // Compute lighting
-        let mat = inter.unwrap().mat;
+        let mat = &inter.as_ref().unwrap().mat;
         let mut color = mat.color;
-        let (spec, diff) = self.lights.bright(&ray, inter.unwrap(), self);
+        let (spec, diff) = self.lights.bright(&ray, inter.as_ref().unwrap(), self);
         color = color * diff * mat.diff + Color::new(1., 1., 1.) * spec * mat.spec;
 
         // Compute refraction
         if mat.refr != 0. && count > 0 {
-            color = color + self.refraction(ray.dir, refr_idx, &inter.unwrap(), count);
+            color = color + self.refraction(ray.dir, refr_idx, inter.as_ref().unwrap(), count);
         }
 
         // Compute reflection
         if mat.refl != 0. && count > 0 {
-            color = color + self.reflection(ray.dir, refr_idx, &inter.unwrap(), count);
+            color = color + self.reflection(ray.dir, refr_idx, inter.as_ref().unwrap(), count);
         }
 
         color.normalize()

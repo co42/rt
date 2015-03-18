@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use vec::Vec3;
 use material::Material;
 
@@ -12,16 +13,15 @@ impl Ray {
     }
 }
 
-#[derive(Copy)]
 pub struct Inter {
     pub dist:   f64,
     pub pos:    Vec3,
     pub normal: Vec3,
-    pub mat:    Material,
+    pub mat:    Rc<Material>,
 }
 
 impl Inter {
-    pub fn new(dist: f64, pos: Vec3, normal: Vec3, mat: Material) -> Inter {
+    pub fn new(dist: f64, pos: Vec3, normal: Vec3, mat: Rc<Material>) -> Inter {
         Inter { dist: dist, pos: pos, normal: normal, mat: mat }
     }
 }

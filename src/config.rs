@@ -19,6 +19,7 @@ fn load_picture(root: &Json, key: &str) -> Picture {
         load_u32(obj, "h"),
         load_str(obj, "path"),
         load_u32_or(obj, "bounce", 5),
+        load_u32_or(obj, "sample", 1),
     )
 }
 

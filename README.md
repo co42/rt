@@ -28,10 +28,13 @@
 
 - Ambient light
 
+### More
+
+- Anti-aliasing
+
 # TODO
 
 - Handle severals lights correctly
-- Anti-aliasing
 - Shadow : handle refraction and reflection
 - Config : handle errors correctly (check all unwrap / try! / panic! in code)
 - Objects : compute wrong normal if inside some objects

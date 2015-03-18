@@ -62,7 +62,8 @@ def hexaground():
                     "mat": {
                         "color": get_color(),
                         "spec": 0.4,
-                        "diff": 1
+                        "diff": 1,
+                        "refl": 0.1
                     }
                 }
             }

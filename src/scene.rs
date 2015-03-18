@@ -1,5 +1,6 @@
 use std::num::Float;
 use std::old_io::fs::File;
+use std::old_io::stdio;
 use image::*;
 use vec::{ Vec3, rotate, dot };
 use ray::{ Ray, Inter };
@@ -12,46 +13,60 @@ pub struct Picture {
     pub h:    u32,
     pub path: Path,
     bounce:   u32,
+    sample:   u32,
 }
 
 impl Picture {
-    pub fn new(w: u32, h: u32, path: &str, bounce: u32) -> Picture {
-        Picture { w: w, h: h, path: Path::new(path), bounce: bounce }
+    pub fn new(w: u32, h: u32, path: &str, bounce: u32, sample: u32) -> Picture {
+        Picture { w: w, h: h, path: Path::new(path), bounce: bounce, sample: sample }
     }
 
     // Picture a scene
     pub fn shot(&self, eye: &Eye, scene: &Scene, progress: bool) -> DynamicImage {
         // Initialize variables used to compute ray
+        let w = (self.w * self.sample) as f64;
+        let h = (self.h * self.sample) as f64;
         let dist = 100.;
         let screen_x = (eye.fov / 2.).tan() * dist;
-        let screen_y = screen_x * self.h as f64 / self.w as f64;
-        let step = Vec3::new(screen_x / self.w as f64, -screen_y / self.h as f64, 0.);
+        let screen_y = screen_x * h / w;
+        let step = Vec3::new(screen_x / w, -screen_y / h, 0.);
         let start = Vec3::new(-screen_x / 2., screen_y / 2., -dist) + step / 2.;
 
         // Create raw buffer of pixels
         let mut pixels = Vec::with_capacity((self.h * self.w) as usize);
         for y in 0..self.h {
             for x in 0..self.w {
-                // Create ray
-                let cur = Vec3::new(x as f64, y as f64, 0.);
-                let mut dir = start + cur * step;
-                dir = rotate(dir, eye.dir).normalize();
-                let ray = Ray::new(eye.pos, dir);
+                let color = (0..(self.sample * self.sample))
+                    .map(|c| (c / self.sample, c % self.sample))
+                    .map(|(sx, sy)| {
+                        // Create ray
+                        let cur = Vec3::new((x * self.sample + sx) as f64, (y * self.sample + sy) as f64, 0.);
+                        let mut dir = start + cur * step;
+                        dir = rotate(dir, eye.dir).normalize();
+                        let ray = Ray::new(eye.pos, dir);
 
-                // Compute and push pixel's colors to raw buffer
-                let color = scene.raytrace(ray, 1. /* Air */, self.bounce);
-                let to_u8 = |c| (c * 255.) as u8; // Convert color from 0..1f64 to 0..255u8
-                pixels.push(to_u8(color.r));
-                pixels.push(to_u8(color.g));
-                pixels.push(to_u8(color.b));
+                        // Compute color
+                        scene.raytrace(ray, 1. /* Air */, self.bounce)
+                    })
+                    .fold(Color::new(0., 0., 0.), |acc, item| acc + item) * (255. / (self.sample * self.sample) as f64);
+
+                // Push pixel's colors to raw buffer
+                pixels.push(color.r as u8);
+                pixels.push(color.g as u8);
+                pixels.push(color.b as u8);
             }
 
             // Show progress
-            if progress { print!("\r{:03}%", (y + 1) * 100 / self.h); }
+            if progress {
+                print!("\r{:03}%", (y + 1) * 100 / self.h);
+                stdio::flush();
+            }
         }
 
         // Show progress
-        if progress { println!(""); }
+        if progress {
+            println!("");
+        }
 
         // Create image from raw buffer
         let img_buf = ImageBuffer::from_raw(self.w, self.h, pixels).unwrap();

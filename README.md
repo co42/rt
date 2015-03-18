@@ -24,17 +24,18 @@
 - Diffuse
 - Specular
 
+## Shadow
+
+- Ambient light
+
 # TODO
 
 - Handle severals lights correctly
-- Ambient light
-- Shadow
-- Colored image to 3d object
+- Anti-aliasing
+- Shadow : handle refraction and reflection
 - Config : handle errors correctly (check all unwrap / try! / panic! in code)
-- Config : max ray bounce, ambient light, background color
-- control.py : choose what to change, history
 - Objects : compute wrong normal if inside some objects
-- AA
+- Colored image to 3d object
 
 # FIXME
 

@@ -17,6 +17,7 @@ fn load_picture(root: &Json, key: &str) -> Picture {
         load_u32(obj, "w"),
         load_u32(obj, "h"),
         load_str(obj, "path"),
+        load_u32_or(obj, "bounce", 5),
     )
 }
 
@@ -36,6 +37,8 @@ fn load_scene<'a>(root: &Json, key: &str) -> Scene<'a> {
     Scene::new(
         load_objects(obj, "objects"),
         load_lights(obj, "lights"),
+        load_f64_or(obj, "ambient", 0.2),
+        load_color_or(obj, "back", Color::new(0.39, 0.8, 0.92)),
     )
 }
 
@@ -195,6 +198,18 @@ fn load_color(root: &Json, key: &str) -> Color {
     )
 }
 
+fn load_color_or(root: &Json, key: &str, def: Color) -> Color {
+    let obj = root.find(key);
+    if obj.is_none() {
+        return def;
+    }
+    Color::new(
+        load_f64(obj.unwrap(), "r"),
+        load_f64(obj.unwrap(), "g"),
+        load_f64(obj.unwrap(), "b"),
+    )
+}
+
 // Vec3
 fn load_vec3(root: &Json, key: &str) -> Vec3 {
     let obj = root.find(key).unwrap();
@@ -226,6 +241,14 @@ fn load_f64_or(root: &Json, key: &str, def: f64) -> f64 {
 // u32
 fn load_u32(root: &Json, key: &str) -> u32 {
     root.find(key).unwrap().as_i64().unwrap() as u32
+}
+
+fn load_u32_or(root: &Json, key: &str, def: u32) -> u32 {
+    let obj = root.find(key);
+    if obj.is_none() {
+        return def;
+    }
+    obj.unwrap().as_i64().unwrap() as u32
 }
 
 // i32

@@ -11,13 +11,15 @@ pub struct Picture {
     pub w:    u32,
     pub h:    u32,
     pub path: Path,
+    bounce:   u32,
 }
 
 impl Picture {
-    pub fn new(w: u32, h: u32, path: &str) -> Picture {
-        Picture { w: w, h: h, path: Path::new(path) }
+    pub fn new(w: u32, h: u32, path: &str, bounce: u32) -> Picture {
+        Picture { w: w, h: h, path: Path::new(path), bounce: bounce }
     }
 
+    // Picture a scene
     pub fn shot(&self, eye: &Eye, scene: &Scene, progress: bool) -> DynamicImage {
         // Initialize variables used to compute ray
         let dist = 100.;
@@ -37,14 +39,18 @@ impl Picture {
                 let ray = Ray::new(eye.pos, dir);
 
                 // Compute and push pixel's colors to raw buffer
-                let color = scene.raytrace(ray, 1. /* Air */, 5);
+                let color = scene.raytrace(ray, 1. /* Air */, self.bounce);
                 let to_u8 = |c| (c * 255.) as u8; // Convert color from 0..1f64 to 0..255u8
                 pixels.push(to_u8(color.r));
                 pixels.push(to_u8(color.g));
                 pixels.push(to_u8(color.b));
             }
+
+            // Show progress
             if progress { print!("\r{:03}%", (y + 1) * 100 / self.h); }
         }
+
+        // Show progress
         if progress { println!(""); }
 
         // Create image from raw buffer
@@ -52,6 +58,7 @@ impl Picture {
         ImageRgb8(img_buf)
     }
 
+    // Write image to file
     pub fn save(&self, img: &DynamicImage) {
         let mut out = File::create(&self.path).unwrap();
         let _ = img.save(&mut out, PNG);
@@ -73,16 +80,13 @@ impl Eye {
 pub struct Scene<'a> {
     objects: Objects<'a>,
     lights:  Lights<'a>,
+    ambient: f64,
+    back:    Color,
 }
 
 impl<'a> Scene<'a> {
-    pub fn new(objects: Objects<'a>, lights: Lights<'a>) -> Scene<'a> {
-        Scene { objects: objects, lights: lights }
-    }
-
-    #[allow(dead_code)]
-    pub fn empty() -> Scene<'a> {
-        Scene { objects: Objects::new(vec![]), lights: Lights::new(vec![]) }
+    pub fn new(objects: Objects<'a>, lights: Lights<'a>, ambient: f64, back: Color) -> Scene<'a> {
+        Scene { objects: objects, lights: lights, ambient: ambient, back: back }
     }
 
     #[allow(dead_code)]
@@ -99,24 +103,26 @@ impl<'a> Scene<'a> {
         // Compute intersection
         let inter = self.objects.intersect(&ray);
         if inter.is_none() {
-            return Color::new(0., 0., 0.);
+            return self.back;
         }
 
         // Compute lighting
-        let mut mat = inter.unwrap().mat;
-        self.lights.color(&mut mat, &ray, inter.unwrap());
+        let mat = inter.unwrap().mat;
+        let mut color = mat.color;
+        let (spec, diff) = self.lights.bright(&ray, inter.unwrap(), self);
+        color = color * diff * mat.diff + Color::new(1., 1., 1.) * spec * mat.spec;
 
         // Compute refraction
         if mat.refr != 0. && count > 0 {
-            mat.color = mat.color + self.refraction(ray.dir, refr_idx, &inter.unwrap(), count);
+            color = color + self.refraction(ray.dir, refr_idx, &inter.unwrap(), count);
         }
 
         // Compute reflection
         if mat.refl != 0. && count > 0 {
-            mat.color = mat.color + self.reflection(ray.dir, refr_idx, &inter.unwrap(), count);
+            color = color + self.reflection(ray.dir, refr_idx, &inter.unwrap(), count);
         }
 
-        mat.color.normalize()
+        color.normalize()
     }
 
     fn refraction(&self, ray_dir: Vec3, refr_idx: f64, inter: &Inter, count: u32) -> Color {
@@ -135,5 +141,17 @@ impl<'a> Scene<'a> {
         let ray = Ray::new(inter.pos + dir * 0.00001, dir);
 
         self.raytrace(ray, refr_idx, count - 1) * inter.mat.refl
+    }
+
+    pub fn shadow(&self, from: Vec3, to: Vec3) -> f64 {
+        let dir = (to - from).normalize();
+        let ray = Ray::new(from + dir * 0.00001, dir);
+
+        // Compute intersection
+        let inter = self.objects.intersect(&ray);
+        if inter.is_none() || (to - inter.unwrap().pos).x * dir.x < 0. {
+            return 1.;
+        }
+        self.ambient
     }
 }

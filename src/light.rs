@@ -1,10 +1,10 @@
 use std::num::Float;
 use vec::{ Vec3, dot };
 use ray::{ Ray, Inter };
-use material::Material;
+use scene::Scene;
 
 pub trait Light {
-    fn color(&self, mat: &mut Material, ray: &Ray, inter: Inter);
+    fn bright(&self, ray: &Ray, inter: Inter, scene: &Scene) -> (f64, f64);
 }
 
 pub struct Lights<'a> {
@@ -19,13 +19,25 @@ impl<'a> Lights<'a> {
     pub fn add(&mut self, light: Box<Light + 'a>) {
         self.all.push(light);
     }
+
+    fn bright_helper(light_pos: Vec3, shin: i32, ray: &Ray, inter: Inter, scene: &Scene) -> (f64, f64) {
+        let l = (light_pos - inter.pos).normalize();
+        let r = (inter.normal * 2. * dot(l, inter.normal) - l).normalize();
+        let v = (ray.pos - inter.pos).normalize();
+
+        let s = scene.shadow(inter.pos, light_pos);
+        let diff = s * dot(l, inter.normal).max(0.);
+        let spec = s * dot(r, v).max(0.).powi(shin);
+
+        (spec, diff)
+    }
 }
 
 impl<'a> Light for Lights<'a> {
-    fn color(&self, mat: &mut Material, ray: &Ray, inter: Inter) {
-        for light in self.all.iter() {
-            light.color(mat, ray, inter);
-        }
+    fn bright(&self, ray: &Ray, inter: Inter, scene: &Scene) -> (f64, f64) {
+        self.all.iter()
+            .map(|l| l.bright(ray, inter, scene))
+            .fold((0., 0.), |acc, item| (acc.0 + item.0, acc.1 + item.1))
     }
 }
 
@@ -45,18 +57,9 @@ impl Bulb {
 }
 
 impl Light for Bulb {
-    fn color(&self, mat: &mut Material, ray: &Ray, inter: Inter) {
-        let l = (self.pos - inter.pos).normalize();
-        let n = inter.normal;
-        let r = (n * 2. * dot(l, n) - l).normalize();
-        let v = (ray.pos - inter.pos).normalize();
-
-        let diff = self.diff * mat.diff * dot(l, n).max(0.);
-        let spec = self.spec * mat.spec * dot(r, v).max(0.).powi(self.shin);
-
-        mat.color.r = mat.color.r * diff + spec;
-        mat.color.g = mat.color.g * diff + spec;
-        mat.color.b = mat.color.b * diff + spec;
+    fn bright(&self, ray: &Ray, inter: Inter, scene: &Scene) -> (f64, f64) {
+        let (spec, diff) = Lights::bright_helper(self.pos, self.shin, ray, inter, scene);
+        (spec * self.spec, diff * self.diff)
     }
 }
 
@@ -76,17 +79,9 @@ impl Sun {
 }
 
 impl Light for Sun {
-    fn color(&self, mat: &mut Material, ray: &Ray, inter: Inter) {
-        let l = self.dir * -1.;
-        let n = inter.normal;
-        let r = (n * 2. * dot(l, n) - l).normalize();
-        let v = (ray.pos - inter.pos).normalize();
-
-        let diff = self.diff * mat.diff * dot(l, n).max(0.);
-        let spec = self.spec * mat.spec * dot(r, v).max(0.).powi(self.shin);
-
-        mat.color.r = mat.color.r * diff + spec;
-        mat.color.g = mat.color.g * diff + spec;
-        mat.color.b = mat.color.b * diff + spec;
+    fn bright(&self, ray: &Ray, inter: Inter, scene: &Scene) -> (f64, f64) {
+        let pos = self.dir * -1000000.;
+        let (spec, diff) = Lights::bright_helper(pos, self.shin, ray, inter, scene);
+        (spec * self.spec, diff * self.diff)
     }
 }

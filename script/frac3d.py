@@ -3,26 +3,26 @@
 import sys
 import json
 from math import tan, pi
-from random import uniform
+from libfrac import *
 
 def get_config():
     return {
         "picture": {
-            "w": 1920,
-            "h": 1050,
+            "w": 100,
+            "h": 100,
             "path": "image/frac3d.png"
         },
         "eye": {
             "fov": 2.1,
             "dir": {
                 "y": 0.0,
-                "x": -1.0999999999999996,
+                "x": -pi / 6,
                 "z": 0
             },
             "pos": {
-                "y": 155,
-                "x": -5,
-                "z": 100
+                "y": 50,
+                "x": 0,
+                "z": 170
             }
         },
         "scene": {
@@ -35,9 +35,9 @@ def get_config():
                         "spec": 1.5,
                         "shin": 20,
                         "pos": {
-                            "x": 25,
-                            "y": 80,
-                            "z": 60
+                            "x": 0,
+                            "y": 300,
+                            "z": 200
                         }
                     }
                 }
@@ -45,42 +45,50 @@ def get_config():
         }
     }
 
-def mandelbrot(x, y, maxiter):
-    z = complex(0, 0)
-    c = complex(x, y)
-    iter = 0
-    while iter < maxiter and z.real * z.real + z.imag * z.imag < 4.:
-        z = z * z + c
-        iter += 1
-    return (iter, z)
-
-def get_var(x, y):
-    MAX_ITER=100
-    (iter, z) = mandelbrot(x, y, MAX_ITER)
-    return (iter / MAX_ITER, { "r": iter / MAX_ITER, "g": iter / MAX_ITER, "b": iter / MAX_ITER })
-
 def frac3d():
     config = get_config()
 
-    COUNT_X = 90
-    COUNT_Z = 90
-    SZ = 3
-    MAX_H = 50
+    # Image
+    iw = 100
+    ih = 100
+    aa = 20
+    maxiter = 50
 
-    FRAC_RATIO = 3 / (COUNT_X * SZ)
+    # Hexa
+    hlarge = 5
+    hheight = 250
+    hw = iw * hlarge
+    hh = ih * hlarge
 
-    for z in range(-COUNT_Z // 2, COUNT_Z // 2):
-        for x in range(-COUNT_X // 2, COUNT_X // 2):
-            xpos = x * SZ + (z % 2) * SZ / 2.
-            zpos = z * tan(pi / 3) * SZ / 2.
-            (height, color) = get_var(xpos * FRAC_RATIO, zpos * FRAC_RATIO)
+    # Hexa start and step
+    hsx, hsy = -hw / 2, -hh / 2
+    hpx, hpy = hlarge, tan(pi / 3) * hlarge / 2
+
+    # Fractal center
+    fx, fy = -0.0140625, 0.7154296875
+    # Fractal size
+    fw = 0.005859375
+    fh = fw * ih / iw
+    # Fractal start and step
+    fsx, fsy = fx - fw / 2, fy - fh / 2
+    fpx = fw / iw
+    fpy = tan(pi / 3) * fpx / 2
+
+    # Compute fractal
+    img = compute(iw, ih, (fsx, fsx + fpx / 2), fsy, fpx, fpy, maxiter, aa, False)
+    for py in range(ih):
+        for px in range(iw):
+            (color, height) = img[py][px]
+            x = hsx + px * hpx + (py % 2) * hlarge / 2.
+            z = hsy + py * hpy
+            h = hheight - height * hheight
             hexa = {
                 "aahexa": {
-                    "pos": { "x": xpos, "y": 0, "z": zpos },
-                    "x": SZ,
-                    "y": height * MAX_H,
+                    "pos": { "x": x, "y": 0, "z": z },
+                    "x": hlarge,
+                    "y": h,
                     "mat": {
-                        "color": color,
+                        "color": { "r": color[0], "g": color[1], "b": color[2] },
                         "spec": 0.4,
                         "diff": 1
                     }

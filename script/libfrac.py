@@ -12,43 +12,61 @@ def mandelbrot(x, y, maxiter):
         iter += 1
     return iter, z
 
-def compute(iw, ih, fsx, fsy, fpx, fpy, maxiter, aa, only_color):
+def compute(iw, ih, fsx, fsy, fpx, fpy, maxiter, aa):
     # Compute image
-    print('Computing image ...', file=sys.stderr)
+    print('Computing fractal ...', file=sys.stderr)
     img = []
     for py in range(ih):
         line = []
         for px in range(iw):
-            colors = [0, 0, 0]
-            smooths = 0
+            iter = 0
+            z = 0
             for _ in range(aa):
-                rfsx = fsx[py % len(fsx)]
-                x, y = rfsx + px * fpx, fsy + py * fpy
+                x, y = fsx + px * fpx, fsy + py * fpy
                 x, y = uniform(x, x + fpx), uniform(y, y + fpy)
-                iter, z = mandelbrot(x, y, maxiter)
-                if iter < maxiter:
-                    smooth = iter + 1 - log(log(abs(z))) / log(2)
-                    smooth /= maxiter
-                    color = hsv_to_rgb(0.95 + 10 * smooth, 0.6, 1)
-                    colors[0] += color[0]
-                    colors[1] += color[1]
-                    colors[2] += color[2]
-                    smooths += smooth
-            colors[0] = colors[0] / aa
-            colors[1] = colors[1] / aa
-            colors[2] = colors[2] / aa
-            smooths /= aa
-
-            if only_color:
-                colors[0] *= 255
-                colors[1] *= 255
-                colors[2] *= 255
-                line += colors
-            else:
-                line.append((colors, smooths))
+                iter_aa, z_aa = mandelbrot(x, y, maxiter)
+                iter += iter_aa
+                z += z_aa
+            iter /= aa
+            z /= aa
+            line.append((iter, z))
 
         img.append(line)
         print('\r%d%%' % int(py * 100 / ih), end='', file=sys.stderr)
 
     print('\rDone !', file=sys.stderr)
     return img
+
+def is_set(img, d, x, y):
+    if y > 0 and y < len(img):
+        line = img[y]
+        if x > 0 and x < len(line):
+            return line[x] is not None and line[x] == d
+    return False
+
+def distance(img_in, iw, ih, maxiter):
+    print('Computing distance ...', file=sys.stderr)
+
+    img = [[None] * iw for _ in range(ih)]
+    done = 0
+
+    for y in range(ih):
+        for x in range(iw):
+            if img_in[y][x][0] == maxiter:
+                img[y][x] = 0
+                done += 1
+
+    d = 1
+    while done < ih * iw:
+        for y in range(ih):
+            for x in range(iw):
+                if img[y][x] is not None:
+                    continue
+                if any((is_set(img, d - 1, x - 1, y - 1), is_set(img, d - 1, x, y - 1), is_set(img, d - 1, x + 1, y - 1), is_set(img, d - 1, x - 1, y), is_set(img, d - 1, x + 1, y), is_set(img, d - 1, x - 1, y + 1), is_set(img, d - 1, x, y + 1), is_set(img, d - 1, x + 1, y + 1))):
+                    img[y][x] = d
+                    done += 1
+        d += 1
+        print('\r%d' % d, end='', file=sys.stderr)
+
+    print('\nDone !    ', file=sys.stderr)
+    return (img, d)

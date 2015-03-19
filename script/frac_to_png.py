@@ -26,8 +26,18 @@ def frac_to_png():
         fpx, fpy = fw / iw, fh / ih
 
         # Compute and save image
-        img = compute(iw, ih, (fsx, ), (fsy, ), fpx, fpy, maxiter, aa, True)
-        png.from_array(img, 'RGB').save("test.png")
+        img_c = compute(iw, ih, fsx, fsy, fpx, fpy, maxiter, aa)
+        (img_d, maxd) = distance(img_c, iw, ih, maxiter)
+        final = []
+        for line in img_d:
+            final_line = []
+            for d in line:
+                if d == 0:
+                    final_line += [0, 0, 0]
+                else:
+                    final_line += [d * 255 / maxd, d * 255 / maxd, d * 255 / maxd]
+            final.append(final_line)
+        png.from_array(final, 'RGB').save("test.png")
 
         # Read input
         with ReadChar() as rc:

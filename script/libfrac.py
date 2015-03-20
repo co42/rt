@@ -1,5 +1,5 @@
 import sys
-from math import log
+from math import log, sqrt
 from colorsys import hsv_to_rgb
 from random import uniform
 
@@ -37,36 +37,41 @@ def compute(iw, ih, fsx, fsy, fpx, fpy, maxiter, aa):
     print('\rDone !', file=sys.stderr)
     return img
 
-def is_set(img, d, x, y):
-    if y > 0 and y < len(img):
-        line = img[y]
-        if x > 0 and x < len(line):
-            return line[x] is not None and line[x] == d
-    return False
+def nearest(base, iw, ih, x, y):
+    dist = None
+    for ny in range(ih):
+        for nx in range(iw):
+            if base[ny][nx]:
+                dx = nx - x
+                dy = ny - y
+                new_dist = sqrt(dx * dx + dy * dy)
+                if dist is None or new_dist < dist:
+                    dist = new_dist
+    return dist
 
 def distance(img_in, iw, ih, maxiter):
     print('Computing distance ...', file=sys.stderr)
 
-    img = [[None] * iw for _ in range(ih)]
-    done = 0
-
+    base = []
     for y in range(ih):
+        line = []
         for x in range(iw):
             if img_in[y][x][0] == maxiter:
-                img[y][x] = 0
-                done += 1
+                line.append(True)
+            else:
+                line.append(False)
+        base.append(line)
 
-    d = 1
-    while done < ih * iw:
-        for y in range(ih):
-            for x in range(iw):
-                if img[y][x] is not None:
-                    continue
-                if any((is_set(img, d - 1, x - 1, y - 1), is_set(img, d - 1, x, y - 1), is_set(img, d - 1, x + 1, y - 1), is_set(img, d - 1, x - 1, y), is_set(img, d - 1, x + 1, y), is_set(img, d - 1, x - 1, y + 1), is_set(img, d - 1, x, y + 1), is_set(img, d - 1, x + 1, y + 1))):
-                    img[y][x] = d
-                    done += 1
-        d += 1
-        print('\r%d' % d, end='', file=sys.stderr)
+    img = []
+    dist_max = 0
+    for y in range(ih):
+        line = []
+        for x in range(iw):
+            dist = nearest(base, iw, ih, x, y)
+            dist_max = max(dist, dist_max)
+            line.append(dist)
+        img.append(line)
+        print('\r%d%%' % int(y * 100 / ih), end='', file=sys.stderr)
 
     print('\nDone !    ', file=sys.stderr)
-    return (img, d)
+    return (img, dist_max)

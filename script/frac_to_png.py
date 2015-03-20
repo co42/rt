@@ -36,6 +36,7 @@ def frac_to_png():
                     final_line += [0, 0, 0]
                 else:
                     final_line += [d * 255 / maxd, d * 255 / maxd, d * 255 / maxd]
+                    # final_line += [255, 255, 255]
             final.append(final_line)
         png.from_array(final, 'RGB').save("test.png")
 

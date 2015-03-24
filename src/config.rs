@@ -2,8 +2,8 @@ use std::rc::Rc;
 use serialize::json::Json;
 use vec::Vec3;
 use material::{ Color, Material };
-use object::{ Object, Objects, Rotate, Sphere, Plane, Dir, AARect, AABox, AAHexa };
-use light::{ Light, Lights, Bulb, Sun };
+use object::*;
+use light::*;
 use scene::{ Picture, Eye, Scene };
 
 pub fn load(input: &str) -> (Eye, Scene, Picture) {
@@ -36,12 +36,29 @@ fn load_eye(root: &Json, key: &str) -> Eye {
 // Scene
 fn load_scene<'a>(root: &Json, key: &str) -> Scene<'a> {
     let obj = root.find(key).unwrap();
-    Scene::new(
+    let mut scene = Scene::new(
         load_objects(obj, "objects"),
         load_lights(obj, "lights"),
         load_f64_or(obj, "ambient", 0.2),
         load_color_or(obj, "back", Color::new(0.39, 0.8, 0.92)),
-    )
+    );
+    let mat = Rc::new(Material::new(Color::new(0., 0., 0.), 0., 1., 0., 1., 0.));
+    let red = Color::new(1., 0., 0.);
+    let green = Color::new(0., 1., 0.);
+    let blue = Color::new(0., 0., 1.);
+    let black = Color::new(0., 0., 0.);
+    scene.add_object(box HeightMap {
+        pos:   Vec3::new(0., 0., 0.),
+        w:     2,
+        h:     2,
+        ratio: 1.,
+        data:  vec![
+            HMData { h: 0., color: red }, HMData { h: 0., color: green },
+            HMData { h: 0., color: blue }, HMData { h: 0., color: black },
+        ],
+        mat:   mat,
+    });
+    scene
 }
 
 // Lights

@@ -1,0 +1,27 @@
+{
+    "picture": {
+        "w": 500,
+        "h": 500,
+        "path": "image/hm.png"
+    },
+    "eye": {
+        "pos": { "x": 0.5, "y": 1, "z": 0.5 },
+        "dir": { "x": -1.6, "y": 0, "z": 0 },
+        "fov": 2.1
+    },
+    "scene": {
+        "ambient": 0.8,
+        "objects": [
+        ],
+        "lights": [
+            {
+                "bulb": {
+                    "pos": { "x": 0.5, "y": 1, "z": 0.5 },
+                    "spec": 1.5,
+                    "shin": 20,
+                    "diff": 0.9
+                }
+            }
+        ]
+    }
+}

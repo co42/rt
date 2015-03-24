@@ -130,7 +130,7 @@ impl<'a> Scene<'a> {
         let mat = &inter.as_ref().unwrap().mat;
         let mut color = mat.color;
         let (spec, diff) = self.lights.bright(&ray, inter.as_ref().unwrap(), self);
-        color = color * diff * mat.diff + Color::new(1., 1., 1.) * spec * mat.spec;
+        color = color * diff.max(self.ambient) * mat.diff + Color::new(1., 1., 1.) * spec * mat.spec;
 
         // Compute refraction
         if mat.refr != 0. && count > 0 {

@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use std::rc::Rc;
 use vec::{ Vec3, dot, rotate };
 use ray::{ Ray, Inter };
-use material::Material;
+use material::{ Color, Material };
 
 pub trait Object {
     fn intersect(&self, ray: &Ray) -> Option<Inter>;
@@ -247,4 +247,76 @@ impl<'a> Object for AAHexa<'a> {
     fn intersect(&self, ray: &Ray) -> Option<Inter> {
         self.faces.intersect(ray)
     }
+}
+
+#[allow(dead_code)]
+pub struct HeightMap {
+    pub pos:   Vec3,
+    pub w:     usize,
+    pub h:     usize,
+    pub ratio: f64,
+    pub data:  Vec<HMData>,
+    pub mat:   Rc<Material>,
+}
+
+impl HeightMap {
+    fn data_at(&self, cur: Vec3) -> Option<HMData> {
+        let pos = (cur - self.pos) * self.ratio;
+
+        // Pos [0, w], [0, h]
+        let x = pos.x;
+        let y = pos.z;
+        if x < 0. || x >= (self.w - 1) as f64 || y < 0. || y >= (self.h - 1) as f64 {
+            return None
+        }
+
+        // Pos [0, 1], [0, 1]
+        let dx = x.fract();
+        let dy = y.fract();
+
+        // Ratio
+        let r00 = (dx + dy) / 2.;
+        let r01 = (dx + (1. - dy)) / 2.;
+        let r10 = ((1. - dx) + dy) / 2.;
+        let r11 = ((1. - dx) + (1. - dy)) / 2.;
+
+        let ref data00 = self.data[y as usize * self.w + x as usize];
+        let ref data01 = self.data[(y + 1.) as usize * self.w + x as usize];
+        let ref data10 = self.data[y as usize * self.w + (x + 1.) as usize];
+        let ref data11 = self.data[(y + 1.) as usize * self.w + (x + 1.) as usize];
+
+        Some(HMData {
+            h: (data00.h + data01.h + data10.h + data11.h) / 4.,
+            color: (data00.color * r00 + data01.color * r01 + data10.color * r10 + data11.color * r11),
+        })
+    }
+}
+
+impl Object for HeightMap {
+    fn intersect(&self, ray: &Ray) -> Option<Inter> {
+        let mut cur = ray.pos;
+        for i in 0..100 {
+            match self.data_at(cur) {
+                Some(ref data) => {
+                    let diff = data.h - cur.y;
+                    if diff.abs() < 0.1 {
+                        let mat = Rc::new(Material::new(data.color, self.mat.spec, self.mat.diff, self.mat.refr, self.mat.refr_idx, self.mat.refl));
+                        return Some(Inter::new((ray.pos - cur).length(), cur, Vec3::new(0., 1., 0.), mat));
+                    }
+                    let step = diff / ray.dir.y;
+                    cur = cur + ray.dir * step;
+                },
+                None => {
+                    return None;
+                }
+            }
+        }
+
+        None
+    }
+}
+
+pub struct HMData {
+    pub h:     f64,
+    pub color: Color,
 }

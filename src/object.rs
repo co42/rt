@@ -1,5 +1,6 @@
 use std::num::Float;
 use std::f64::consts::PI;
+use std::cmp::partial_max;
 use std::rc::Rc;
 use vec::{ Vec3, dot, rotate };
 use ray::{ Ray, Inter };
@@ -250,20 +251,32 @@ impl<'a> Object for AAHexa<'a> {
 }
 
 #[allow(dead_code)]
-pub struct HeightMap {
-    pub pos:   Vec3,
-    pub w:     usize,
-    pub h:     usize,
-    pub ratio: f64,
-    pub data:  Vec<HMData>,
-    pub mat:   Rc<Material>,
+pub struct HeightMap<'a> {
+    pos:   Vec3,
+    start: Vec3,
+    ratio: f64,
+    w:     usize,
+    h:     usize,
+    data:  Vec<HMData>,
+    mat:   Rc<Material>,
+    aabb:  AABox<'a>,
 }
 
-impl HeightMap {
-    fn data_at(&self, cur: Vec3) -> Option<HMData> {
-        let pos = (cur - self.pos) * self.ratio;
+impl<'a> HeightMap<'a> {
+    pub fn new(pos: Vec3, ratio: f64, w: usize, h: usize, data: Vec<HMData>, mat: Rc<Material>) -> HeightMap<'a> {
+        let maxh = data.iter().fold(0., |acc, ref item| partial_max(acc, item.h).unwrap());
+        let dim = Vec3::new((w - 1) as f64 * ratio, maxh as f64 * ratio, (h - 1) as f64 * ratio);
+        let start = pos - Vec3::new(dim.x, 0., dim.z) / 2.;
 
+        let aapos = start + dim / 2.;
+        let aabb = AABox::new(aapos, dim, mat.clone(), false);
+
+        HeightMap { pos: pos, start: start, ratio: ratio, w: w, h: h, data: data, mat: mat, aabb: aabb }
+    }
+
+    fn data_at(&self, cur: Vec3) -> Option<HMData> {
         // Pos [0, w], [0, h]
+        let pos = (cur - self.start) / self.ratio;
         let x = pos.x;
         let y = pos.z;
         if x < 0. || x >= (self.w - 1) as f64 || y < 0. || y >= (self.h - 1) as f64 {
@@ -286,20 +299,25 @@ impl HeightMap {
         let ref data11 = self.data[(y + 1.) as usize * self.w + (x + 1.) as usize];
 
         Some(HMData {
-            h: (data00.h + data01.h + data10.h + data11.h) / 4.,
+            h: (data00.h * r00 + data01.h * r01 + data10.h * r10 + data11.h * r11) / 4.,
             color: (data00.color * r00 + data01.color * r01 + data10.color * r10 + data11.color * r11),
         })
     }
 }
 
-impl Object for HeightMap {
+impl<'a> Object for HeightMap<'a> {
     fn intersect(&self, ray: &Ray) -> Option<Inter> {
         let mut cur = ray.pos;
-        for i in 0..100 {
+        match self.aabb.intersect(ray) {
+            Some(ref inter) => cur = inter.pos,
+            None            => return None,
+        }
+
+        for _ in 0..100 {
             match self.data_at(cur) {
                 Some(ref data) => {
                     let diff = data.h - cur.y;
-                    if diff.abs() < 0.1 {
+                    if diff.abs() < 0.01 {
                         let mat = Rc::new(Material::new(data.color, self.mat.spec, self.mat.diff, self.mat.refr, self.mat.refr_idx, self.mat.refl));
                         return Some(Inter::new((ray.pos - cur).length(), cur, Vec3::new(0., 1., 0.), mat));
                     }
@@ -317,6 +335,12 @@ impl Object for HeightMap {
 }
 
 pub struct HMData {
-    pub h:     f64,
-    pub color: Color,
+    h:     f64,
+    color: Color,
+}
+
+impl HMData {
+    pub fn new(h: f64, color: Color) -> HMData {
+        HMData { h: h, color: color }
+    }
 }

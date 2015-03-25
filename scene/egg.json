@@ -1,0 +1,49 @@
+{
+    "picture": {
+        "w": 500,
+        "h": 500,
+        "path": "image/egg.png"
+    },
+    "eye": {
+        "pos": { "x": 0, "y": 2, "z": 0 },
+        "dir": { "x": -1.57, "y": 0, "z": 0 },
+        "fov": 2.1
+    },
+    "scene": {
+        "ambient": 0.2,
+        "objects": [
+            {
+                "plane": {
+                    "pos": { "x": 0, "y": 0, "z": 0 },
+                    "normal": { "x": 0, "y": 1, "z": 0 },
+                    "mat": {
+                        "color": { "r": 1, "g": 0, "b": 0 },
+                        "spec": 0,
+                        "diff": 1
+                    }
+                }
+            },
+            {
+                "sphere": {
+                    "pos": { "x": 0, "y": 0, "z": 0 },
+                    "radius": 0.8,
+                    "mat": {
+                        "color": { "r": 0, "g": 0, "b": 1 },
+                        "spec": 0,
+                        "diff": 1
+                    }
+                }
+            }
+        ],
+        "lights": [
+            {
+                "bulb": {
+                    "pos": { "x": 0, "y": 2, "z": 0 },
+                    "spec": 0,
+                    "shin": 0,
+                    "diff": 0.9
+                }
+            }
+        ]
+    }
+}

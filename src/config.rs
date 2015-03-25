@@ -36,29 +36,12 @@ fn load_eye(root: &Json, key: &str) -> Eye {
 // Scene
 fn load_scene<'a>(root: &Json, key: &str) -> Scene<'a> {
     let obj = root.find(key).unwrap();
-    let mut scene = Scene::new(
+    Scene::new(
         load_objects(obj, "objects"),
         load_lights(obj, "lights"),
         load_f64_or(obj, "ambient", 0.2),
         load_color_or(obj, "back", Color::new(0.39, 0.8, 0.92)),
-    );
-    let mat = Rc::new(Material::new(Color::new(0., 0., 0.), 0., 1., 0., 1., 0.));
-    let red = Color::new(1., 0., 0.);
-    let green = Color::new(0., 1., 0.);
-    let blue = Color::new(0., 0., 1.);
-    let black = Color::new(0., 0., 0.);
-    scene.add_object(box HeightMap {
-        pos:   Vec3::new(0., 0., 0.),
-        w:     2,
-        h:     2,
-        ratio: 1.,
-        data:  vec![
-            HMData { h: 0., color: red }, HMData { h: 0., color: green },
-            HMData { h: 0., color: blue }, HMData { h: 0., color: black },
-        ],
-        mat:   mat,
-    });
-    scene
+    )
 }
 
 // Lights
@@ -114,6 +97,7 @@ fn load_object(root: &Json) -> Box<Object> {
         "aarect" => box load_aarect(root, key) as Box<Object>,
         "aabox"  => box load_aabox(root, key) as Box<Object>,
         "aahexa" => box load_aahexa(root, key) as Box<Object>,
+        "hm"     => box load_height_map(root, key) as Box<Object>,
         _        => panic!("Not an object"),
     }
 }
@@ -125,6 +109,33 @@ fn load_rotate<'a>(root: &Json, key: &str) -> Rotate<'a> {
         load_vec3(obj, "pos"),
         load_vec3(obj, "dir"),
         load_object(obj.find("object").unwrap()),
+    )
+}
+
+// HeightMap
+fn load_height_map<'a>(root: &Json, key: &str) -> HeightMap<'a> {
+    let obj = root.find(key).unwrap();
+    HeightMap::new(
+        load_vec3(obj, "pos"),
+        load_f64(obj, "ratio"),
+        load_usize(obj, "w"),
+        load_usize(obj, "h"),
+        load_hm_data_array(obj, "data"),
+        Rc::new(load_material(obj, "mat")),
+    )
+}
+
+// Array of HMData
+fn load_hm_data_array(root: &Json, key: &str) -> Vec<HMData> {
+    let array = root.find(key).unwrap().as_array().unwrap();
+    array.iter().map(|obj| load_hm_data(obj)).collect()
+}
+
+// HMData
+fn load_hm_data(obj: &Json) -> HMData {
+    HMData::new(
+        load_f64(obj, "h"),
+        load_color(obj, "color"),
     )
 }
 
@@ -255,6 +266,11 @@ fn load_f64_or(root: &Json, key: &str, def: f64) -> f64 {
         return def;
     }
     obj.unwrap().as_f64().unwrap()
+}
+
+// usize
+fn load_usize(root: &Json, key: &str) -> usize {
+    root.find(key).unwrap().as_i64().unwrap() as usize
 }
 
 // u32

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use serialize::json::Json;
+use rustc_serialize::json::Json;
 use vec::Vec3;
 use material::{ Color, Material };
 use object::*;
@@ -47,15 +47,18 @@ fn load_scene<'a>(root: &Json, key: &str) -> Scene<'a> {
 // Lights
 fn load_lights<'a>(root: &Json, key: &str) -> Lights<'a> {
     let array = root.find(key).unwrap().as_array().unwrap();
-    let all = array.iter().map(|obj| {
-        let key = obj.as_object().unwrap().keys().next().unwrap();
-        match key.as_slice() {
-            "bulb" => box load_bulb(obj, key) as Box<Light>,
-            "sun"  => box load_sun(obj, key) as Box<Light>,
-            _      => panic!("Not a light"),
-        }
-    }).collect();
+    let all = array.iter().map(|obj| load_light(obj)).collect();
     Lights::new(all)
+}
+
+// Light
+fn load_light(root: &Json) -> Box<Light> {
+    let key = root.as_object().unwrap().keys().next().unwrap();
+    match key.as_ref() {
+        "bulb" => box load_bulb(root, key),
+        "sun"  => box load_sun(root, key),
+        _      => panic!("Not a light"),
+    }
 }
 
 // Sun
@@ -90,14 +93,14 @@ fn load_objects<'a>(root: &Json, key: &str) -> Objects<'a> {
 // Object
 fn load_object(root: &Json) -> Box<Object> {
     let key = root.as_object().unwrap().keys().next().unwrap();
-    match key.as_slice() {
-        "rotate" => box load_rotate(root, key) as Box<Object>,
-        "sphere" => box load_sphere(root, key) as Box<Object>,
-        "plane"  => box load_plane(root, key) as Box<Object>,
-        "aarect" => box load_aarect(root, key) as Box<Object>,
-        "aabox"  => box load_aabox(root, key) as Box<Object>,
-        "aahexa" => box load_aahexa(root, key) as Box<Object>,
-        "hm"     => box load_height_map(root, key) as Box<Object>,
+    match key.as_ref() {
+        "rotate" => box load_rotate(root, key),
+        "sphere" => box load_sphere(root, key),
+        "plane"  => box load_plane(root, key),
+        "aarect" => box load_aarect(root, key),
+        "aabox"  => box load_aabox(root, key),
+        "aahexa" => box load_aahexa(root, key),
+        "hm"     => box load_height_map(root, key),
         _        => panic!("Not an object"),
     }
 }
@@ -251,8 +254,8 @@ fn load_vec3(root: &Json, key: &str) -> Vec3 {
 }
 
 // String
-fn load_str<'a>(root: &'a Json, key: &str) -> &'a str {
-    root.find(key).unwrap().as_string().unwrap()
+fn load_str(root: &Json, key: &str) -> String {
+    root.find(key).unwrap().as_string().unwrap().to_string()
 }
 
 // f64

@@ -2,7 +2,7 @@ use std::num::Float;
 use std::f64::consts::PI;
 use std::cmp::partial_max;
 use std::rc::Rc;
-use vec::{ Vec3, dot, rotate };
+use vec::{ Vec3, dot, cross, rotate };
 use ray::{ Ray, Inter };
 use material::{ Color, Material };
 
@@ -265,7 +265,7 @@ pub struct HeightMap<'a> {
 impl<'a> HeightMap<'a> {
     pub fn new(pos: Vec3, ratio: f64, w: usize, h: usize, data: Vec<HMData>, mat: Rc<Material>) -> HeightMap<'a> {
         let maxh = data.iter().fold(0., |acc, ref item| partial_max(acc, item.h).unwrap());
-        let dim = Vec3::new((w - 1) as f64 * ratio, maxh as f64 * ratio, (h - 1) as f64 * ratio);
+        let dim = Vec3::new((w - 1) as f64 * ratio, maxh * ratio, (h - 1) as f64 * ratio);
         let start = pos - Vec3::new(dim.x, 0., dim.z) / 2.;
 
         let aapos = start + dim / 2.;
@@ -274,8 +274,8 @@ impl<'a> HeightMap<'a> {
         HeightMap { pos: pos, start: start, ratio: ratio, w: w, h: h, data: data, mat: mat, aabb: aabb }
     }
 
-    fn data_at(&self, cur: Vec3) -> Option<HMData> {
-        // Pos [0, w], [0, h]
+    fn data_at(&self, cur: Vec3) -> Option<(HMData, Vec3)> {
+        // Projection of the ray's position to the height map : [0, w], [0, h]
         let pos = (cur - self.start) / self.ratio;
         let x = pos.x;
         let y = pos.z;
@@ -283,47 +283,84 @@ impl<'a> HeightMap<'a> {
             return None
         }
 
-        // Pos [0, 1], [0, 1]
+        // Projection of the ray's position to a square [0, 1], [0, 1]
         let dx = x.fract();
         let dy = y.fract();
 
-        // Ratio
-        let r00 = (dx + dy) / 2.;
-        let r01 = (dx + (1. - dy)) / 2.;
-        let r10 = ((1. - dx) + dy) / 2.;
-        let r11 = ((1. - dx) + (1. - dy)) / 2.;
+        // Weight of each data (corner)
+        let length = |x: f64, y: f64| (x * x + y * y).sqrt();
+        let r00 = 1. - length(dx, dy).min(1.);
+        let r01 = 1. - length(dx, 1. - dy).min(1.);
+        let r10 = 1. - length(1. - dx, dy).min(1.);
+        let r11 = 1. - length(1. - dx, 1. - dy).min(1.);
+        let rtotal = r00 + r01 + r10 + r11;
 
+        // Square data (corners)
         let ref data00 = self.data[y as usize * self.w + x as usize];
         let ref data01 = self.data[(y + 1.) as usize * self.w + x as usize];
         let ref data10 = self.data[y as usize * self.w + (x + 1.) as usize];
         let ref data11 = self.data[(y + 1.) as usize * self.w + (x + 1.) as usize];
 
-        Some(HMData {
-            h: (data00.h * r00 + data01.h * r01 + data10.h * r10 + data11.h * r11) / 4.,
-            color: (data00.color * r00 + data01.color * r01 + data10.color * r10 + data11.color * r11),
-        })
+        // Corners' normals
+        let v00_01 = Vec3::new(0., data01.h - data00.h, 1.);
+        let v00_10 = Vec3::new(1., data10.h - data00.h, 0.);
+        let n00 = cross(v00_01, v00_10).normalize();
+
+        let v10_11 = Vec3::new(0., data11.h - data10.h, 1.);
+        let v10_00 = Vec3::new(1., data00.h - data10.h, 0.);
+        let n10 = cross(v10_11, v10_00).normalize();
+
+        let v01_00 = Vec3::new(0., data00.h - data01.h, 1.);
+        let v01_11 = Vec3::new(1., data11.h - data01.h, 0.);
+        let n01 = cross(v01_00, v01_11).normalize();
+
+        let v11_10 = Vec3::new(0., data10.h - data11.h, 1.);
+        let v11_01 = Vec3::new(1., data01.h - data11.h, 0.);
+        let n11 = cross(v11_10, v11_01).normalize();
+
+        // Result ...
+        let h = (data00.h * r00 + data01.h * r01 + data10.h * r10 + data11.h * r11) / rtotal;
+        let color = (data00.color * r00 + data01.color * r01 + data10.color * r10 + data11.color * r11) / rtotal;
+        let normal = (n00 * r00 + n01 * r01 + n10 * r10 + n11 * r11) / rtotal;
+
+        Some((HMData::new(h, color), normal))
     }
 }
 
 impl<'a> Object for HeightMap<'a> {
     fn intersect(&self, ray: &Ray) -> Option<Inter> {
-        let mut cur = ray.pos;
+        // Test interction with the AABB
+        let mut cur;
         match self.aabb.intersect(ray) {
             Some(ref inter) => cur = inter.pos,
             None            => return None,
         }
 
+        // Test intersection with the height map (ray marching)
+        let mut dist = (ray.pos - cur).length();
         for _ in 0..100 {
             match self.data_at(cur) {
-                Some(ref data) => {
+                Some((ref data, normal)) => {
+                    // Test intersection
                     let diff = data.h - cur.y;
-                    if diff.abs() < 0.01 {
+                    if diff.abs() < 0.00001 {
                         let mat = Rc::new(Material::new(data.color, self.mat.spec, self.mat.diff, self.mat.refr, self.mat.refr_idx, self.mat.refl));
-                        return Some(Inter::new((ray.pos - cur).length(), cur, Vec3::new(0., 1., 0.), mat));
+                        return Some(Inter::new(dist, cur, normal, mat));
                     }
+
+                    // Compute next move
                     let step = diff / ray.dir.y;
+                    dist += step;
+
+                    // Intersection is behind
+                    if dist < 0. {
+                        return None
+                    }
+
+                    // Move closer to the height map
                     cur = cur + ray.dir * step;
                 },
+                // Height map missed
                 None => {
                     return None;
                 }

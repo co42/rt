@@ -1,6 +1,6 @@
 use std::num::Float;
-use std::old_io::fs::File;
-use std::old_io::stdio;
+use std::fs::File;
+use std::io::{ stdout, Write };
 use image::*;
 use vec::{ Vec3, rotate, dot };
 use ray::{ Ray, Inter };
@@ -11,14 +11,14 @@ use light::{ Light, Lights };
 pub struct Picture {
     pub w:    u32,
     pub h:    u32,
-    pub path: Path,
+    pub path: String,
     bounce:   u32,
     sample:   u32,
 }
 
 impl Picture {
-    pub fn new(w: u32, h: u32, path: &str, bounce: u32, sample: u32) -> Picture {
-        Picture { w: w, h: h, path: Path::new(path), bounce: bounce, sample: sample }
+    pub fn new(w: u32, h: u32, path: String, bounce: u32, sample: u32) -> Picture {
+        Picture { w: w, h: h, path: path, bounce: bounce, sample: sample }
     }
 
     // Picture a scene
@@ -64,7 +64,7 @@ impl Picture {
             // Show progress
             if progress {
                 print!("\r{:03}%", (py + 1) * 100 / self.h);
-                stdio::flush();
+                let _ = stdout().flush();
             }
         }
 
@@ -150,7 +150,7 @@ impl<'a> Scene<'a> {
         let c1 = -dot(inter.normal, ray_dir);
         let c2 = (1. - n * n * (1. - c1 * c1)).sqrt();
         let dir = (ray_dir * n + inter.normal * (n * c1 - c2)).normalize();
-        let ray = Ray::new(inter.pos + dir * 0.00001, dir);
+        let ray = Ray::new(inter.pos + dir * 0.0001, dir);
 
         self.raytrace(ray, inter.mat.refr_idx, count - 1) * inter.mat.refr
     }
@@ -158,14 +158,14 @@ impl<'a> Scene<'a> {
     fn reflection(&self, ray_dir: Vec3, refr_idx: f64, inter: &Inter, count: u32) -> Color {
         let c1 = -dot(inter.normal, ray_dir);
         let dir = (ray_dir + inter.normal * 2. * c1).normalize();
-        let ray = Ray::new(inter.pos + dir * 0.00001, dir);
+        let ray = Ray::new(inter.pos + dir * 0.0001, dir);
 
         self.raytrace(ray, refr_idx, count - 1) * inter.mat.refl
     }
 
     pub fn shadow(&self, from: Vec3, to: Vec3) -> f64 {
         let dir = (to - from).normalize();
-        let ray = Ray::new(from + dir * 0.00001, dir);
+        let ray = Ray::new(from + dir * 0.0001, dir);
 
         // Compute intersection
         let inter = self.objects.intersect(&ray);

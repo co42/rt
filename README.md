@@ -7,6 +7,7 @@
 - AARect
 - AABox
 - AAHexa
+- HeightMap
 
 ### Effects
 
@@ -38,7 +39,6 @@
 - Shadow : handle refraction and reflection
 - Config : handle errors correctly (check all unwrap / try! / panic! in code)
 - Objects : compute wrong normal if inside some objects
-- Colored image to 3d object
 
 # FIXME
 

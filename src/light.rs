@@ -80,7 +80,7 @@ impl Sun {
 
 impl Light for Sun {
     fn bright(&self, ray: &Ray, inter: &Inter, scene: &Scene) -> (f64, f64) {
-        let pos = self.dir * -1000000.;
+        let pos = self.dir * -1000000.; // The Sun is farrrrr away
         let (spec, diff) = Lights::bright_helper(pos, self.shin, ray, inter, scene);
         (spec * self.spec, diff * self.diff)
     }

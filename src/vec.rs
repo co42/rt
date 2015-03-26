@@ -75,6 +75,10 @@ pub fn dot(left: Vec3, right: Vec3) -> f64 {
     left.x * right.x + left.y * right.y + left.z * right.z
 }
 
+pub fn cross(left: Vec3, right: Vec3) -> Vec3 {
+    Vec3::new(left.y * right.z - left.z * right.y, left.z * right.x - left.x * right.z, left.x * right.z - left.y * right.x)
+}
+
 pub fn rotate(vec: Vec3, dir: Vec3) -> Vec3 {
     let mut res = vec;
     if dir.x != 0. {

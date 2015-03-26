@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Div};
 use std::num::Float;
 
 #[derive(Copy)]
@@ -31,6 +31,14 @@ impl Mul<f64> for Color {
 
     fn mul(self, rhs: f64) -> Color {
         Color::new(self.r * rhs, self.g * rhs, self.b * rhs)
+    }
+}
+
+impl Div<f64> for Color {
+    type Output = Color;
+
+    fn div(self, rhs: f64) -> Color {
+        Color::new(self.r / rhs, self.g / rhs, self.b / rhs)
     }
 }
 
